@@ -1,0 +1,5 @@
+// import {
+//   "MuVirus/config-moon" @lib,
+// }
+
+pkgtype(kind: "executable")

@@ -1,0 +1,9 @@
+import {
+  "MuVirus/config-moon" @config,
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/double",
+} for "wbtest"

@@ -1,0 +1,79 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/config-moon"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror ConfigError {
+  MissingKey(String)
+  TypeMismatch(String, String, String)
+  ParseError(String)
+  MergeConflict(String, String, String)
+} derive(Eq, @debug.Debug)
+pub fn ConfigError::equal(Self, Self) -> Bool
+pub fn ConfigError::not_equal(Self, Self) -> Bool
+pub fn ConfigError::output(Self, &Logger) -> Unit
+pub fn ConfigError::to_repr(Self) -> @debug.Repr
+pub fn ConfigError::to_string(Self) -> String
+pub impl Show for ConfigError
+
+// Types and methods
+pub struct Config {
+  sources : Array[&Source]
+  value : Value
+}
+pub fn Config::add(Self, &Source) -> Self
+pub fn Config::build(Self) -> Self raise ConfigError
+pub fn Config::get_bool(Self, String) -> Bool raise ConfigError
+pub fn Config::get_float(Self, String) -> Double raise ConfigError
+pub fn Config::get_int(Self, String) -> Int64 raise ConfigError
+pub fn Config::get_string(Self, String) -> String raise ConfigError
+pub fn Config::get_value(Self, String) -> Value raise ConfigError
+pub fn Config::new() -> Self
+
+pub struct MemorySource {
+  table : Value
+}
+pub fn MemorySource::collect(Self) -> Value raise ConfigError
+pub fn MemorySource::new(Value) -> Self
+pub impl Source for MemorySource
+
+pub struct Value {
+  kind : ValueKind
+} derive(Eq, @debug.Debug)
+pub fn Value::array(Array[Self]) -> Self
+pub fn Value::bool(Bool) -> Self
+pub fn Value::equal(Self, Self) -> Bool
+pub fn Value::float(Double) -> Self
+pub fn Value::get_path(Self, String) -> Self raise ConfigError
+pub fn Value::int(Int64) -> Self
+pub fn Value::not_equal(Self, Self) -> Bool
+pub fn Value::null() -> Self
+pub fn Value::str(String) -> Self
+pub fn Value::table(Map[String, Self]) -> Self
+pub fn Value::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ValueKind {
+  Null
+  Bool(Bool)
+  Int(Int64)
+  Float(Double)
+  Str(String)
+  Array(Array[Value])
+  Table(Map[String, Value])
+} derive(Eq, @debug.Debug)
+pub fn ValueKind::equal(Self, Self) -> Bool
+pub fn ValueKind::name(Self) -> String
+pub fn ValueKind::not_equal(Self, Self) -> Bool
+pub fn ValueKind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
+pub(open) trait Source {
+  fn collect(Self) -> Value raise ConfigError
+}
