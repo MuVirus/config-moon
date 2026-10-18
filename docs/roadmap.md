@@ -28,11 +28,11 @@
 
 **方向**：把各种格式的配置读成同一份 `Value`。格式之间可以自由替换，声明不用改。
 
-- [x] JSON 文本（`json_source` 包）
+- [x] JSON 文本（`core/source/json_source/` 包）
 - [ ] TOML
 - [ ] YAML
 - [ ] ENV
-- [ ] INI
+- [x] INI（`core/source/ini_source/` 包）
 - [ ] XML（优先级靠后）
 - [ ] CBOR —— 嵌入式 / 物联网领域
 
@@ -42,7 +42,9 @@
 
 **CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子：CBOR 的整数、字符串、数组、映射都是明确标类型的，`Value` 里的六个分支正好对得上，不用为它加特例。
 
-**代价**：TOML、YAML、ENV、INI、XML、CBOR 目前都没有 core 内置的解析器，都要引第三方依赖。所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source` 不受影响。
+**代价**：TOML、YAML、ENV、XML、CBOR 目前都没有 core 内置的解析器，都要引第三方依赖。所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source` 不受影响。
+
+**JSON 和 INI 都是自己写的解析器，没有第三方依赖。** 两者都只用 core 的包：JSON 走 `@json`，INI 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释。
 
 ---
 

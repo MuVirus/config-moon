@@ -1,5 +1,5 @@
 // import {
-//   "MuVirus/config-moon" @lib,
+//   "MuVirus/config-moon/core" @lib,
 // }
 
 pkgtype(kind: "executable")

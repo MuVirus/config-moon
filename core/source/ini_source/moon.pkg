@@ -1,0 +1,4 @@
+import {
+  "MuVirus/config-moon/core" @config,
+  "moonbitlang/core/string",
+}

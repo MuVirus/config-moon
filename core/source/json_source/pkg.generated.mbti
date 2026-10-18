@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/config-moon/core/source/json_source"
+
+import {
+  "MuVirus/config-moon/core",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn[T : @json.FromJson] extract(@core.Value) -> T raise @core.ConfigError
+
+pub fn[T : @json.FromJson] extract_from(@core.Config, String) -> T raise @core.ConfigError
+
+pub fn to_json(@core.Value) -> Json
+
+// Errors
+
+// Types and methods
+pub struct JsonSource {
+  text : String
+}
+pub fn JsonSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn JsonSource::from_str(String) -> Self
+pub impl @core.Source for JsonSource
+
+// Type aliases
+
+// Traits

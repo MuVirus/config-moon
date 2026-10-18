@@ -34,7 +34,7 @@ pub struct Value {
 
 ```
 import {
-  "MuVirus/config-moon" @config,
+  "MuVirus/config-moon/core" @config,
 }
 
 using @config { type Config, type JsonSource, type MemorySource, extract }
@@ -205,31 +205,36 @@ pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 ## 8. 文件与推进顺序
 
 ```
-核心包 MuVirus/config-moon —— 只依赖 moonbitlang/core/debug
-value.mbt      ValueKind + Value + 构造器
-path.mbt       点号路径取值
-merge.mbt      merge + 优先级
-error.mbt      ConfigError
-source.mbt     Source trait（核心唯一的扩展点）
-memory.mbt     MemorySource
-config.mbt     Config 构建器 + get_string / get_int / get_bool / get_float
+核心包 MuVirus/config-moon/core —— 只依赖 moonbitlang/core/debug
+core/value.mbt    ValueKind + Value + 构造器
+core/path.mbt     点号路径取值
+core/merge.mbt    merge + 优先级
+core/error.mbt    ConfigError
+core/source.mbt   Source trait（核心唯一的扩展点）
+core/memory.mbt   MemorySource
+core/config.mbt   Config 构建器 + get_string / get_int / get_bool / get_float
 
 来源包（各自 import 核心，按需加依赖）
-json_source/   JsonSource + to_json + extract
-env/           EnvSource      ← @env 按 target 分文件
-file/          FileSource     ← @fs
-toml/          TomlFormat     ← 第三方依赖
+core/source/json_source/   JsonSource + to_json + extract
+core/source/ini_source/    IniSource（自写解析器，无第三方依赖）
+core/source/env_source/    EnvSource      ← @env 按 target 分文件
+core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
+core/source/toml_source/   TomlSource     ← 第三方依赖
 ```
 
 拆包的判据只有一条：**这个模块会不会给核心带来依赖或平台约束。**
-`env` / `file` / `toml` 都会，所以必须拆；`json_source` 只依赖 core 的 `@json`，
+`env_source` / `file_source` / `toml_source` 都会，所以必须拆；`json_source` 只依赖 core 的 `@json`，
 拆是为了让"只用内存来源"的用户不被 JSON 的依赖链绑住。
 
-> **2026-09 实测：包名不能和 core 撞车。**
-> 来源包原本叫 `json/`，但包名会占一个全局别名，和 `moonbitlang/core/json` 冲突，
-> core 的 `json.mbti` 里 `@json.JsonPath` 这类自引用被遮蔽，直接报
-> `Package "json" not found in the loaded packages`。给 core 那边改别名也绕不开
-> （冲突发生在引用侧），只能把自己的包改名成 `json_source`。
+`validate` / `autodetect` / `hotreload` 不实现 `Source`，不进 `core/`，放在模块根目录。
+
+> **2026-09 实测：包名不能和 core 包重名，换别名也救不回来。**
+> 来源包原本叫 `json/`，后来挪进 `core/source/` 时又试过叫 `json/`，两次都失败。
+> 包名本身占一个全局名字：自己的包叫 `json`，`moonbitlang/core/json` 就根本加载不进来
+> （`Package "json" not found in the loaded packages`），它的 `.mbti` 里 `@json.JsonPath`
+> 这类自引用随之失效。把 core 那边的 import 写成 `@corejson` 也没用——冲突发生在包名，
+> 不在别名上。结论：格式包一律保留 `_source` 后缀，`toml_source`、`env_source` 同理
+> （`env` 会和 `moonbitlang/core/env` 撞，`file` 迟早也会撞上什么）。
 
 > **2026-09 实测：方法不能跨包。**
 > 跨包给别的包的类型加方法会报 `4059: Cannot define method for foreign type`。
@@ -242,7 +247,7 @@ toml/          TomlFormat     ← 第三方依赖
 | 1 | `value.mbt` + `error.mbt` | 构造几个 `Value`，`debug_inspect` 形状对 |
 | 2 | `merge.mbt` | 嵌套 `Table` 验证「后覆盖前、表逐 key 合、数组整体换」 |
 | 3 | `source.mbt` + `config.mbt` | 两个 `MemorySource` 合起来，`get_*` 取到值；缺 key 报 `MissingKey` |
-| 4 | `json_source/` | `Json` 文本 → `Value`，`Int` / `Float` 按有无小数点分开 |
+| 4 | `core/source/json_source/` | `Json` 文本 → `Value`，`Int` / `Float` 按有无小数点分开 |
 | 5 | `extract` | 大整数端到端不丢 |
 
 第 1~3 步做完，库就能用了（只是来源只有内存）。第 4、5 步各是独立的增量。

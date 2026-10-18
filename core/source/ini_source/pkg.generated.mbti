@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/config-moon/core/source/ini_source"
+
+import {
+  "MuVirus/config-moon/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct IniSource {
+  text : String
+}
+pub fn IniSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn IniSource::from_str(String) -> Self
+pub impl @core.Source for IniSource
+
+// Type aliases
+
+// Traits

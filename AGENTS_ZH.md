@@ -24,10 +24,12 @@
 - 核心（`Value` 和合并逻辑）不碰 I/O，必须在所有 target 上都能编译。文件和环境变量来源属于独立的子包。
 - 提取到用户结构体复用编译器自带的 `derive(FromJson)`；这个库不生成代码，也不定义自定义的 derive trait。
 - 错误消息必须写出键名、期望类型和实际类型。
-- 模块拆成两个包：`MuVirus/config-moon`（核心）和 `MuVirus/config-moon/json_source`。模块名里带 `-`，
-  所以每个 `moon.pkg` 都必须显式指定别名（`@config`、`@jsonsrc`）。
-- 子包不能叫 `json`。包名会占用一个全局别名，和 `moonbitlang/core/json` 撞车之后，core 自己对自身的引用
-  也解析不到（`Package "json" not found`）。
+- 目前两个包：`MuVirus/config-moon/core`（核心）和 `MuVirus/config-moon/core/source/json_source`
+  （来源包放在核心目录下面，一种格式一个目录）。省略别名时 MoonBit 按目录名绑定，实测也能编译；
+  但本项目一律显式写出别名（`@config`、`@jsonsrc`），目录将来再调整时用户的写法不用跟着改。
+- 包名不能和 core 里的包同名，哪怕每条 import 都写了显式别名也不行。包名本身占一个全局名字，
+  叫 `json` 的包会让 `moonbitlang/core/json` 根本加载不进来，它自己的自引用也解析不到。
+  所以格式包一律保留 `_source` 后缀。
 - 方法不能跨包（`4059: Cannot define method for foreign type`）。要给别的包的类型配一个辅助函数，
   只能写成自由函数：`to_json(v)`，而不是 `v.to_json()`。凡是以后可能挪到别的包里去的，都优先写成自由函数。
 
@@ -35,7 +37,8 @@
 进行中或未进行。`docs/testing.md` 是本项目的测试约定。
 
 目前已实现：核心包（`Value`、路径取值、合并、错误处理、`Config`、`MemorySource`、提取到用户结构体）
-和 `json_source` 包（`JsonSource`、`to_json`、`extract_from`）。
+和两个来源包：`core/source/json_source`（`JsonSource`、`to_json`、`extract_from`）
+与 `core/source/ini_source`（`IniSource`，解析器自己写）。
 
 ## 项目结构
 
@@ -44,7 +47,7 @@
 
 - 顶层目录有一个 `moon.mod`，记录模块元信息。
 
-- 核心包在顶层目录，`json_source/` 是第二个包，`docs/` 放设计、路线图和测试三个文档。
+- 核心包在 `core/`，来源包在 `core/source/`（一种格式一个目录），`docs/` 放设计、路线图和测试三个文档。
 
 - 测试遵循 `docs/testing.md`：公开 API 的示例写在 `///` 文档注释的 ` ```mbt check ` 代码块里，
   私有逻辑放进 `_wbtest.mbt`，公开 API 的行为放进 `_test.mbt`。本项目不用内联测试。

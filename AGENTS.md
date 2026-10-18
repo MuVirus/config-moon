@@ -29,12 +29,15 @@ Design constraints worth knowing before touching code:
 - Extraction into user structs reuses the compiler's built-in `derive(FromJson)`;
   the library does not generate code or define custom derive traits.
 - Error messages must name the key, the expected type, and the actual type.
-- The module is split into two packages: `MuVirus/config-moon` (core) and
-  `MuVirus/config-moon/json_source`. The module name contains a `-`, so every
-  `moon.pkg` has to give an explicit alias (`@config`, `@jsonsrc`).
-- A subpackage must not be named `json`. Package names occupy a global alias,
-  and it collides with `moonbitlang/core/json`, whose own self-references then
-  stop resolving (`Package "json" not found`).
+- The module has two packages so far: `MuVirus/config-moon/core` (core) and
+  `MuVirus/config-moon/core/source/json_source` (sources live under the core
+  package, one directory per format). Leaving the alias off binds the directory
+  name, which also compiles, but every `moon.pkg` here spells the alias out
+  (`@config`, `@jsonsrc`) so the short name survives a future directory change.
+- A package must not be named after a core package, not even when every import
+  uses an explicit alias. The package name itself occupies a global name, so a
+  package called `json` keeps `moonbitlang/core/json` from loading at all and
+  its self-references fail to resolve. Keep the `_source` suffix.
 - Methods cannot cross package boundaries (`4059: Cannot define method for
   foreign type`). A helper on another package's type has to be a free function:
   `to_json(v)`, not `v.to_json()`. Prefer free functions for anything that might
@@ -45,8 +48,9 @@ directions still to be built, each marked done, in progress or not started.
 `docs/testing.md` is the test convention for this project.
 
 Implemented today: the core package (`Value`, path lookup, merge, error
-handling, `Config`, `MemorySource`, extraction into user structs) and the
-`json_source` package (`JsonSource`, `to_json`, `extract_from`).
+handling, `Config`, `MemorySource`, extraction into user structs) and two source
+packages: `core/source/json_source` (`JsonSource`, `to_json`, `extract_from`)
+and `core/source/ini_source` (`IniSource`, hand-written parser).
 
 ## Project Structure
 
@@ -58,8 +62,9 @@ handling, `Config`, `MemorySource`, extraction into user structs) and the
 - In the toplevel directory, there is a `moon.mod` file listing module
   metadata.
 
-- The core package sits in the toplevel directory, `json_source/` is the second
-  package, and `docs/` holds the design, roadmap and testing documents.
+- The core package sits in `core/`; its sources sit in `core/source/`, one
+  directory per format, and `docs/` holds the design, roadmap and testing
+  documents.
 
 - Tests follow `docs/testing.md`: examples for public API live in `///` doc
   comments as ` ```mbt check ` blocks, private logic goes into `_wbtest.mbt`,

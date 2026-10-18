@@ -17,7 +17,7 @@ MoonBit 配置库
 
 ## 功能特性
 
-- **多格式支持**：JSON 文本或自建的 `Value` 树都能作为来源
+- **多格式支持**：JSON 文本、INI 文本或自建的 `Value` 树都能作为来源
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
 
@@ -29,15 +29,15 @@ MoonBit 配置库
 
 ```
 import {
-  "MuVirus/config-moon" @config,
-  "MuVirus/config-moon/json_source" @jsonsrc,
+  "MuVirus/config-moon/core" @config,
+  "MuVirus/config-moon/core/source/json_source" @jsonsrc,
 }
 ```
 
-> **必须显式指定别名。** 模块名为 `MuVirus/config-moon`，默认别名会解析为 `config-moon`，
-> 而 `-` 不是合法的 MoonBit 标识符，因此需要显式指定 `@config`。
+> **别名显式写出来。** 省略别名时 MoonBit 按目录名绑定，核心会变成 `@core`，实测能编译；
+> 本项目统一写 `@config` / `@jsonsrc`，短，且目录再调整时用户的写法不用跟着改。
 
-核心包提供 `MemorySource`（装自建的 `Value` 树），`json_source` 包提供 `JsonSource`（读 JSON 文本）。
+核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树），`core/source/json_source/` 包提供 `JsonSource`（读 JSON 文本）。
 
 叠加两个来源，后加入的覆盖先加入的：
 
