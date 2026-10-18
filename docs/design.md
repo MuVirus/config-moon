@@ -202,20 +202,7 @@ pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 
 ---
 
-## 8. 明确不做
-
-- 环境变量来源（类型推断逻辑复杂，先不做）
-- TOML / YAML 后端
-- 日期类型
-- 来源追踪
-- 数组拼接
-- 自定义 `derive` / 代码生成器
-
-列出来是为了**防止实现时顺手多做**。
-
----
-
-## 9. 文件与推进顺序
+## 8. 文件与推进顺序
 
 ```
 核心包 MuVirus/config-moon —— 只依赖 moonbitlang/core/debug
@@ -262,7 +249,7 @@ toml/          TomlFormat     ← 第三方依赖
 
 ---
 
-## 10. 已实测的坑
+## 9. 已实测的坑
 
 | 实测 | 结果 | 影响 |
 |---|---|---|
