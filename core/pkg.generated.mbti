@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "MuVirus/config-moon/core"
+package "MuVirus/moonfig/core"
 
 import {
   "moonbitlang/core/debug",

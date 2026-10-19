@@ -7,7 +7,7 @@
 
 ## 这个项目是什么
 
-`config-moon` 是一个用 MoonBit 写的配置库。它从多个来源读取配置（JSON 文本、内存里的表，以后还会有更多格式），
+`moonfig` 是一个用 MoonBit 写的配置库。它从多个来源读取配置（JSON 文本、内存里的表，以后还会有更多格式），
 把它们归一成一种中间表示，按层合并这些来源（后加入的覆盖先加入的），并让用户按键读取值，
 或者提取到自己的结构体。
 
@@ -24,7 +24,7 @@
 - 核心（`Value` 和合并逻辑）不碰 I/O，必须在所有 target 上都能编译。文件和环境变量来源属于独立的子包。
 - 提取到用户结构体复用编译器自带的 `derive(FromJson)`；这个库不生成代码，也不定义自定义的 derive trait。
 - 错误消息必须写出键名、期望类型和实际类型。
-- 目前两个包：`MuVirus/config-moon/core`（核心）和 `MuVirus/config-moon/core/source/json_source`
+- 目前两个包：`MuVirus/moonfig/core`（核心）和 `MuVirus/moonfig/core/source/json_source`
   （来源包放在核心目录下面，一种格式一个目录）。省略别名时 MoonBit 按目录名绑定，实测也能编译；
   但本项目一律显式写出别名（`@config`、`@jsonsrc`），目录将来再调整时用户的写法不用跟着改。
 - 包名不能和 core 里的包同名，哪怕每条 import 都写了显式别名也不行。包名本身占一个全局名字，

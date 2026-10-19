@@ -7,7 +7,7 @@ You can browse and install extra skills here:
 
 ## What this project is
 
-`config-moon` is a configuration library for MoonBit. It reads configuration
+`moonfig` is a configuration library for MoonBit. It reads configuration
 from multiple sources (JSON text, in-memory tables, and later more formats),
 normalizes everything into one intermediate representation, merges the sources
 in layers (later sources override earlier ones), and lets the user read values
@@ -29,8 +29,8 @@ Design constraints worth knowing before touching code:
 - Extraction into user structs reuses the compiler's built-in `derive(FromJson)`;
   the library does not generate code or define custom derive traits.
 - Error messages must name the key, the expected type, and the actual type.
-- The module has two packages so far: `MuVirus/config-moon/core` (core) and
-  `MuVirus/config-moon/core/source/json_source` (sources live under the core
+- The module has two packages so far: `MuVirus/moonfig/core` (core) and
+  `MuVirus/moonfig/core/source/json_source` (sources live under the core
   package, one directory per format). Leaving the alias off binds the directory
   name, which also compiles, but every `moon.pkg` here spells the alias out
   (`@config`, `@jsonsrc`) so the short name survives a future directory change.

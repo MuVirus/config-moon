@@ -1,4 +1,4 @@
-# config-moon
+# moonfig
 
 MoonBit 配置库
 
@@ -29,8 +29,8 @@ MoonBit 配置库
 
 ```
 import {
-  "MuVirus/config-moon/core" @config,
-  "MuVirus/config-moon/core/source/json_source" @jsonsrc,
+  "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/core/source/json_source" @jsonsrc,
 }
 ```
 
@@ -95,7 +95,8 @@ let db : DbCfg = extract_from(cfg, "db")
 
 ## 文档
 
-- `moon doc --open` —— 生成的 API 文档
+- `moon doc` —— 生成 API 文档到 `_build/doc/`
+- `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
 - [docs/roadmap.md](docs/roadmap.md) —— 分阶段计划与推进顺序
 - [docs/design.md](docs/design.md) —— 类型设计、合并规则、包划分理由、完整示例
 - [docs/testing.md](docs/testing.md) —— 测试写法规范

@@ -9,13 +9,13 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "MuVirus/config-moon"
+name = "MuVirus/moonfig"
 
 version = "0.1.0"
 
 readme = "README.mbt.md"
 
-repository = "https://github.com/MuVirus/config-moon.git"
+repository = "https://github.com/MuVirus/moonfig.git"
 
 license = "Apache-2.0"
 

@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "MuVirus/config-moon/core/source/json_source"
+package "MuVirus/moonfig/core/source/json_source"
 
 import {
-  "MuVirus/config-moon/core",
+  "MuVirus/moonfig/core",
   "moonbitlang/core/json",
 }
 

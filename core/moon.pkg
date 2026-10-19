@@ -3,5 +3,5 @@ import {
 }
 
 import {
-  "MuVirus/config-moon/core" @config,
+  "MuVirus/moonfig/core" @config,
 } for "test"

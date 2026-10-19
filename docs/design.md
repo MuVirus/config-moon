@@ -1,4 +1,4 @@
-# config-moon 最小设计
+# moonfig 最小设计
 
 主线是「多来源 → 统一表示 → 分层合并 → 取值 / 提取到结构体」，先做能跑通的最小闭环。
 
@@ -34,7 +34,7 @@ pub struct Value {
 
 ```
 import {
-  "MuVirus/config-moon/core" @config,
+  "MuVirus/moonfig/core" @config,
 }
 
 using @config { type Config, type JsonSource, type MemorySource, extract }
@@ -205,7 +205,7 @@ pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 ## 8. 文件与推进顺序
 
 ```
-核心包 MuVirus/config-moon/core —— 只依赖 moonbitlang/core/debug
+核心包 MuVirus/moonfig/core —— 只依赖 moonbitlang/core/debug
 core/value.mbt    ValueKind + Value + 构造器
 core/path.mbt     点号路径取值
 core/merge.mbt    merge + 优先级

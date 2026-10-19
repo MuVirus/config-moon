@@ -19,7 +19,7 @@
 
 ```
 import {
-  "MuVirus/config-moon/core" @config,
+  "MuVirus/moonfig/core" @config,
 } for "test"
 
 import {
@@ -73,7 +73,7 @@ pub fn MemorySource::new(table : Value) -> MemorySource {
 ````moonbit
 /// ```mbt nocheck
 /// import {
-///   "MuVirus/config-moon/core" @config,
+///   "MuVirus/moonfig/core" @config,
 /// }
 /// ```
 ````

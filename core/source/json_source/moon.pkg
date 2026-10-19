@@ -1,5 +1,5 @@
 import {
-  "MuVirus/config-moon/core" @config,
+  "MuVirus/moonfig/core" @config,
   "moonbitlang/core/bigint",
   "moonbitlang/core/json",
 }
