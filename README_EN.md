@@ -2,7 +2,7 @@
 
 # moonfig
 
-A configuration library for MoonBit.
+A native configuration library for MoonBit.
 
 **Declare once, gather from many sources.**
 
@@ -43,20 +43,10 @@ import {
 > import block survives a future directory reshuffle.
 
 The core package `core/` provides `MemorySource` (holds a hand-built `Value`
-tree). Each format lives in its own package under `core/source/`:
-
-| Package | Source | Parsed by |
-|---|---|---|
-| `core` | `MemorySource` | the core itself: `Value`, merge, lookup, errors |
-| `core/source/json_source` | `JsonSource` | JSON text, via the core's `@json` |
-| `core/source/ini_source` | `IniSource` | INI text, parser written here |
-| `core/source/dotenv_source` | `DotenvSource` | `.env` text, parser written here |
-| `core/source/yaml_source` | `YamlSource` | YAML text, via `moonbit-community/yaml` |
-| `core/source/toml_source` | `TomlSource` | TOML text, via `moonbit-community/toml` |
-| `core/source/xml_source` | `XmlSource` | XML text, via `Milky2018/xml` |
-
-Each format's mapping rules live in that package's doc comment — value typing,
-comments and quoting differ from one format to the next.
+tree). Every other format has a package of its own, named
+`core/source/<format>_source` — add the one you need to your `moon.pkg`. The
+mapping rules live in each package's doc comment; the full list of packages is
+in [docs/design.md](docs/design.md).
 
 Stack two sources and the later one wins:
 
@@ -107,7 +97,7 @@ let db : DbCfg = extract_from(cfg, "db")
 | ⬜ | **Format detection** | By suffix, by content, an error when neither decides |
 | ⬜ | **Hot reload** | Watch the file, re-read and merge, notify listeners, keep the old config when a new one is bad |
 
-✅ done (maintenance only, no redesign)　🚧 in progress　⬜ not started
+✅ done (in maintenance)　🚧 in progress　⬜ not started
 
 The full item list and the trade-offs behind them live in
 [docs/roadmap.md](docs/roadmap.md).

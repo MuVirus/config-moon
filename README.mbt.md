@@ -2,7 +2,7 @@
 
 # moonfig
 
-MoonBit 配置库
+MoonBit 原生配置库
 
 **一处声明，多来源汇入。**
 
@@ -40,19 +40,9 @@ import {
 > **别名显式写出来。** 省略别名时 MoonBit 按目录名绑定，核心会变成 `@core`，实测能编译；
 > 本项目统一写 `@config` / `@jsonsrc`，短，且目录再调整时用户的写法不用跟着改。
 
-核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树）。各格式在 `core/source/` 下各占一个包：
-
-| 包 | 来源 | 解析 |
-|---|---|---|
-| `core` | `MemorySource` | 核心：`Value`、合并、取值、错误 |
-| `core/source/json_source` | `JsonSource` | JSON 文本，用 core 的 `@json` |
-| `core/source/ini_source` | `IniSource` | INI 文本，解析器自己写 |
-| `core/source/dotenv_source` | `DotenvSource` | `.env` 文本，解析器自己写 |
-| `core/source/yaml_source` | `YamlSource` | YAML 文本，用 `moonbit-community/yaml` |
-| `core/source/toml_source` | `TomlSource` | TOML 文本，用 `moonbit-community/toml` |
-| `core/source/xml_source` | `XmlSource` | XML 文本，用 `Milky2018/xml` |
-
-各格式的映射规则写在各自包的文档注释里，值的类型、注释和引号的处理各格式不一样。
+核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树）。其余格式各占一个包，
+名字是 `core/source/<格式>_source`，要加哪个格式就把哪个包写进 `moon.pkg`。
+映射规则在每个包的文档注释里，完整的包清单见 [docs/design.md](docs/design.md)。
 
 叠加两个来源，后加入的覆盖先加入的：
 
@@ -102,7 +92,7 @@ let db : DbCfg = extract_from(cfg, "db")
 | ⬜ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
 | ⬜ | **热更新** | 监听文件变化、重新读取并合并、回调通知、失败时保留旧配置 |
 
-✅ 已完成（进入维护，只修不改）　🚧 进行中　⬜ 未进行
+✅ 已完成（进入维护）　🚧 进行中　⬜ 未进行
 
 完整的条目和取舍见 [docs/roadmap.md](docs/roadmap.md)。
 
