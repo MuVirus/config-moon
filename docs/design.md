@@ -133,6 +133,7 @@ pub(open) trait Source {
 - `DotenvSource` —— `.env` 文本 → `Value`（自写解析器，零第三方依赖）
 - `YamlSource` —— YAML 文本 → `Value`（解析用 `moonbit-community/yaml`）
 - `TomlSource` —— TOML 文本 → `Value`（解析用 `moonbit-community/toml`）
+- `XmlSource` —— XML 文本 → `Value`（解析用 `Milky2018/xml`）
 
 编程式构造一棵表：
 
@@ -224,6 +225,7 @@ core/source/ini_source/    IniSource（自写解析器，无第三方依赖）
 core/source/dotenv_source/ DotenvSource（自写解析器，无第三方依赖）
 core/source/yaml_source/   YamlSource（依赖 moonbit-community/yaml）
 core/source/toml_source/   TomlSource（依赖 moonbit-community/toml）
+core/source/xml_source/    XmlSource（依赖 Milky2018/xml）
 core/source/env_source/    EnvSource      ← @env 按 target 分文件
 core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
 ```

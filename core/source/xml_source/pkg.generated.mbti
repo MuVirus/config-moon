@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/source/xml_source"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct XmlSource {
+  text : String
+}
+pub fn XmlSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn XmlSource::from_str(String) -> Self
+pub impl @core.Source for XmlSource
+
+// Type aliases
+
+// Traits

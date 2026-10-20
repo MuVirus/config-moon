@@ -18,7 +18,7 @@ MoonBit 配置库
 ## 功能特性
 
 - **类型安全配置**：通过 `derive(FromJson)` 自动生成配置结构体的反序列化实现，提取结果即为该类型；无需额外的代码生成器，使用 MoonBit 原生派生机制
-- **多格式支持**：JSON 文本、INI 文本、`.env` 文本、YAML 文本、TOML 文本或自建的 `Value` 树都能作为来源
+- **多格式支持**：JSON 文本、INI 文本、`.env` 文本、YAML 文本、TOML 文本、XML 文本或自建的 `Value` 树都能作为来源
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
 
@@ -38,7 +38,7 @@ import {
 > **别名显式写出来。** 省略别名时 MoonBit 按目录名绑定，核心会变成 `@core`，实测能编译；
 > 本项目统一写 `@config` / `@jsonsrc`，短，且目录再调整时用户的写法不用跟着改。
 
-核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树），`core/source/json_source/` 包提供 `JsonSource`（读 JSON 文本），`core/source/ini_source/`、`core/source/dotenv_source/`、`core/source/yaml_source/` 与 `core/source/toml_source/` 分别提供 `IniSource`、`DotenvSource`、`YamlSource` 和 `TomlSource`（INI 和 `.env` 的解析器自己写，YAML 与 TOML 交给 `moonbit-community/yaml` 和 `moonbit-community/toml`）。
+核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树），`core/source/json_source/` 包提供 `JsonSource`（读 JSON 文本），`core/source/ini_source/`、`core/source/dotenv_source/`、`core/source/yaml_source/`、`core/source/toml_source/` 与 `core/source/xml_source/` 分别提供 `IniSource`、`DotenvSource`、`YamlSource`、`TomlSource` 和 `XmlSource`（INI 和 `.env` 的解析器自己写，YAML、TOML 与 XML 交给 `moonbit-community/yaml`、`moonbit-community/toml` 和 `Milky2018/xml`）。
 
 叠加两个来源，后加入的覆盖先加入的：
 

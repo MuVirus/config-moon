@@ -1,0 +1,14 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "Milky2018/xml",
+  "moonbitlang/core/string",
+}
+
+import {
+  "MuVirus/moonfig/core" @config,
+} for "test"
+
+import {
+  "MuVirus/moonfig/core" @config,
+  "Milky2018/xml",
+} for "wbtest"
