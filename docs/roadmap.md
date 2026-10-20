@@ -29,7 +29,7 @@
 **方向**：把各种格式的配置读成同一份 `Value`。格式之间可以自由替换，声明不用改。
 
 - [x] JSON 文本（`core/source/json_source/` 包）
-- [ ] TOML
+- [x] TOML（`core/source/toml_source/` 包，依赖 `moonbit-community/toml`）
 - [x] YAML（`core/source/yaml_source/` 包，依赖 `moonbit-community/yaml`）
 - [x] `.env` 文本（`core/source/dotenv_source/` 包）
 - [x] INI（`core/source/ini_source/` 包）
@@ -42,11 +42,13 @@
 
 **CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子：CBOR 的整数、字符串、数组、映射都是明确标类型的，`Value` 里的六个分支正好对得上，不用为它加特例。
 
-**代价**：YAML 依赖第三方解析器 `moonbit-community/yaml`，TOML、XML、CBOR 还没有现成实现。所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
+**代价**：YAML 和 TOML 依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`），XML、CBOR 还没有现成实现。所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
 
 **JSON、INI 和 `.env` 都是自己写的解析器，没有第三方依赖。** 三者都只用 core 的包：JSON 走 `@json`，INI 和 `.env` 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释；`.env` 的规则也写在包文档里：`export` 前缀可选、键名里的 `.` 变层级、单引号原样保留、双引号认转义、`#` 前面有空白才算行尾注释、不做变量展开。
 
 **YAML 的语法交给 `moonbit-community/yaml`，本库只做 `Yaml` → `Value` 的转换。** 包文档写明了边界：只接受一个文档，空文件、空文档、只有注释的文件以及根节点为 `null` 的文件得到空表；根节点通常应是映射；整数超出 `Int64` 报错，不静默降级成浮点。
+
+**TOML 的语法交给 `moonbit-community/toml`，本库只做 `TomlValue` → `Value` 的转换。** 包文档写明了边界：根节点必须是一张表；数组里混着不同类型时报错（TOML 要求同类型数组）；日期时间在 `Value` 里没有对应形状，按原文当字符串存；大整数保持 `Int64`。
 
 ---
 

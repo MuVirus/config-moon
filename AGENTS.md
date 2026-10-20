@@ -51,7 +51,8 @@ Implemented today: the core package (`Value`, path lookup, merge, error
 handling, `Config`, `MemorySource`, extraction into user structs) and the source
 packages under `core/source/`: JSON (`JsonSource`, `to_json`, `extract_from`),
 INI (`IniSource`, hand-written parser), `.env` (`DotenvSource`, hand-written
-parser) and YAML (`YamlSource`, parsing backed by `moonbit-community/yaml`).
+parser), YAML (`YamlSource`, parsing backed by `moonbit-community/yaml`) and
+TOML (`TomlSource`, parsing backed by `moonbit-community/toml`).
 
 ## Project Structure
 

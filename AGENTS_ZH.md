@@ -38,8 +38,9 @@
 
 目前已实现：核心包（`Value`、路径取值、合并、错误处理、`Config`、`MemorySource`、提取到用户结构体）
 和 `core/source/` 下的来源包：JSON（`JsonSource`、`to_json`、`extract_from`）、
-INI（`IniSource`，解析器自己写）、`.env`（`DotenvSource`，解析器自己写）与
-YAML（`YamlSource`，解析交给 `moonbit-community/yaml`）。
+INI（`IniSource`，解析器自己写）、`.env`（`DotenvSource`，解析器自己写）、
+YAML（`YamlSource`，解析交给 `moonbit-community/yaml`）与
+TOML（`TomlSource`，解析交给 `moonbit-community/toml`）。
 
 ## 项目结构
 
