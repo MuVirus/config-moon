@@ -19,11 +19,22 @@ repository = "https://github.com/MuVirus/moonfig.git"
 
 license = "Apache-2.0"
 
-keywords = [ "config", "configuration", "json", "merge", "settings" ]
+keywords = [
+  "config",
+  "configuration",
+  "settings",
+  "merge",
+  "json",
+  "yaml",
+  "toml",
+  "xml",
+  "ini",
+  "env",
+]
 
 preferred_target = "native"
 
-description = "一个用 MoonBit 实现的多来源配置库。"
+description = "MoonBit 原生配置库：多来源合并成一份配置，按 key 取值或提取成你自己的类型。"
 
 import {
   "Milky2018/xml@0.6.1",
