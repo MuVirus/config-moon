@@ -1,3 +1,5 @@
+**中文** | [English](README_EN.md)
+
 # moonfig
 
 MoonBit 配置库
@@ -28,7 +30,7 @@ MoonBit 配置库
 
 在 `moon.pkg` 中加入依赖：
 
-```
+```moonbit
 import {
   "MuVirus/moonfig/core" @config,
   "MuVirus/moonfig/core/source/json_source" @jsonsrc,
@@ -38,7 +40,19 @@ import {
 > **别名显式写出来。** 省略别名时 MoonBit 按目录名绑定，核心会变成 `@core`，实测能编译；
 > 本项目统一写 `@config` / `@jsonsrc`，短，且目录再调整时用户的写法不用跟着改。
 
-核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树），`core/source/json_source/` 包提供 `JsonSource`（读 JSON 文本），`core/source/ini_source/`、`core/source/dotenv_source/`、`core/source/yaml_source/`、`core/source/toml_source/` 与 `core/source/xml_source/` 分别提供 `IniSource`、`DotenvSource`、`YamlSource`、`TomlSource` 和 `XmlSource`（INI 和 `.env` 的解析器自己写，YAML、TOML 与 XML 交给 `moonbit-community/yaml`、`moonbit-community/toml` 和 `Milky2018/xml`）。
+核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树）。各格式在 `core/source/` 下各占一个包：
+
+| 包 | 来源 | 解析 |
+|---|---|---|
+| `core` | `MemorySource` | 核心：`Value`、合并、取值、错误 |
+| `core/source/json_source` | `JsonSource` | JSON 文本，用 core 的 `@json` |
+| `core/source/ini_source` | `IniSource` | INI 文本，解析器自己写 |
+| `core/source/dotenv_source` | `DotenvSource` | `.env` 文本，解析器自己写 |
+| `core/source/yaml_source` | `YamlSource` | YAML 文本，用 `moonbit-community/yaml` |
+| `core/source/toml_source` | `TomlSource` | TOML 文本，用 `moonbit-community/toml` |
+| `core/source/xml_source` | `XmlSource` | XML 文本，用 `Milky2018/xml` |
+
+各格式的映射规则写在各自包的文档注释里，值的类型、注释和引号的处理各格式不一样。
 
 叠加两个来源，后加入的覆盖先加入的：
 
@@ -82,7 +96,7 @@ let db : DbCfg = extract_from(cfg, "db")
 | 状态 | 方向 | 条目 |
 |---|---|---|
 | 🚧 | **核心** | 统一的配置值类型、按键合并、按键取值、按结构体取值、错误处理 |
-| 🚧 | **多格式** | 常见通用格式、CBOR、支持其他格式接入 |
+| 🚧 | **多格式** | CBOR、让别的格式接进来 |
 | ⬜ | **外部来源** | 配置文件、环境变量、多个来源任意组合 |
 | ⬜ | **校验** | 必填项、取值范围、自定义规则 |
 | ⬜ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
