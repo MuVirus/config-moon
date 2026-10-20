@@ -48,10 +48,10 @@ directions still to be built, each marked done, in progress or not started.
 `docs/testing.md` is the test convention for this project.
 
 Implemented today: the core package (`Value`, path lookup, merge, error
-handling, `Config`, `MemorySource`, extraction into user structs) and three
-source packages: `core/source/json_source` (`JsonSource`, `to_json`,
-`extract_from`), `core/source/ini_source` (`IniSource`, hand-written parser)
-and `core/source/dotenv_source` (`DotenvSource`, hand-written parser).
+handling, `Config`, `MemorySource`, extraction into user structs) and the source
+packages under `core/source/`: JSON (`JsonSource`, `to_json`, `extract_from`),
+INI (`IniSource`, hand-written parser), `.env` (`DotenvSource`, hand-written
+parser) and YAML (`YamlSource`, parsing backed by `moonbit-community/yaml`).
 
 ## Project Structure
 

@@ -24,3 +24,7 @@ keywords = [ "config", "configuration", "json", "merge", "settings" ]
 preferred_target = "native"
 
 description = "一个用 MoonBit 实现的多来源配置库。"
+
+import {
+  "moonbit-community/yaml@0.0.8",
+}

@@ -131,6 +131,7 @@ pub(open) trait Source {
 - `JsonSource` —— 文本 → `Json` → `Value`（用 core 的 `@json`，零第三方依赖）
 - `IniSource` —— INI 文本 → `Value`（自写解析器，零第三方依赖）
 - `DotenvSource` —— `.env` 文本 → `Value`（自写解析器，零第三方依赖）
+- `YamlSource` —— YAML 文本 → `Value`（解析用 `moonbit-community/yaml`）
 
 编程式构造一棵表：
 
@@ -220,6 +221,7 @@ core/config.mbt   Config 构建器 + get_string / get_int / get_bool / get_float
 core/source/json_source/   JsonSource + to_json + extract
 core/source/ini_source/    IniSource（自写解析器，无第三方依赖）
 core/source/dotenv_source/ DotenvSource（自写解析器，无第三方依赖）
+core/source/yaml_source/   YamlSource（依赖 moonbit-community/yaml）
 core/source/env_source/    EnvSource      ← @env 按 target 分文件
 core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
 core/source/toml_source/   TomlSource     ← 第三方依赖

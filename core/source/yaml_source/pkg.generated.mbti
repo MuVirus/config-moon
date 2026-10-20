@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/source/yaml_source"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct YamlSource {
+  text : String
+}
+pub fn YamlSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn YamlSource::from_str(String) -> Self
+pub impl @core.Source for YamlSource
+
+// Type aliases
+
+// Traits

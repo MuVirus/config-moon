@@ -37,9 +37,9 @@
 进行中或未进行。`docs/testing.md` 是本项目的测试约定。
 
 目前已实现：核心包（`Value`、路径取值、合并、错误处理、`Config`、`MemorySource`、提取到用户结构体）
-和三个来源包：`core/source/json_source`（`JsonSource`、`to_json`、`extract_from`）、
-`core/source/ini_source`（`IniSource`，解析器自己写）与
-`core/source/dotenv_source`（`DotenvSource`，解析器自己写）。
+和 `core/source/` 下的来源包：JSON（`JsonSource`、`to_json`、`extract_from`）、
+INI（`IniSource`，解析器自己写）、`.env`（`DotenvSource`，解析器自己写）与
+YAML（`YamlSource`，解析交给 `moonbit-community/yaml`）。
 
 ## 项目结构
 
