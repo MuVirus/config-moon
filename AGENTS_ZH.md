@@ -24,8 +24,8 @@
 - 核心（`Value` 和合并逻辑）不碰 I/O，必须在所有 target 上都能编译。文件和环境变量来源属于独立的子包。
 - 提取到用户结构体复用编译器自带的 `derive(FromJson)`；这个库不生成代码，也不定义自定义的 derive trait。
 - 错误消息必须写出键名、期望类型和实际类型。
-- 目前两个包：`MuVirus/moonfig/core`（核心）和 `MuVirus/moonfig/core/source/json_source`
-  （来源包放在核心目录下面，一种格式一个目录）。省略别名时 MoonBit 按目录名绑定，实测也能编译；
+- 模块按包拆分：`MuVirus/moonfig/core`（核心）和 `MuVirus/moonfig/core/source/` 下的来源包
+  （一种格式一个目录）。省略别名时 MoonBit 按目录名绑定，实测也能编译；
   但本项目一律显式写出别名（`@config`、`@jsonsrc`），目录将来再调整时用户的写法不用跟着改。
 - 包名不能和 core 里的包同名，哪怕每条 import 都写了显式别名也不行。包名本身占一个全局名字，
   叫 `json` 的包会让 `moonbitlang/core/json` 根本加载不进来，它自己的自引用也解析不到。
@@ -37,8 +37,9 @@
 进行中或未进行。`docs/testing.md` 是本项目的测试约定。
 
 目前已实现：核心包（`Value`、路径取值、合并、错误处理、`Config`、`MemorySource`、提取到用户结构体）
-和两个来源包：`core/source/json_source`（`JsonSource`、`to_json`、`extract_from`）
-与 `core/source/ini_source`（`IniSource`，解析器自己写）。
+和三个来源包：`core/source/json_source`（`JsonSource`、`to_json`、`extract_from`）、
+`core/source/ini_source`（`IniSource`，解析器自己写）与
+`core/source/dotenv_source`（`DotenvSource`，解析器自己写）。
 
 ## 项目结构
 

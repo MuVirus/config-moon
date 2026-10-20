@@ -125,10 +125,12 @@ pub(open) trait Source {
 }
 ```
 
-只有两个实现：
+只有这几个实现：
 
 - `MemorySource` —— 直接塞一棵 `Table`，用来测合并
 - `JsonSource` —— 文本 → `Json` → `Value`（用 core 的 `@json`，零第三方依赖）
+- `IniSource` —— INI 文本 → `Value`（自写解析器，零第三方依赖）
+- `DotenvSource` —— `.env` 文本 → `Value`（自写解析器，零第三方依赖）
 
 编程式构造一棵表：
 
@@ -217,6 +219,7 @@ core/config.mbt   Config 构建器 + get_string / get_int / get_bool / get_float
 来源包（各自 import 核心，按需加依赖）
 core/source/json_source/   JsonSource + to_json + extract
 core/source/ini_source/    IniSource（自写解析器，无第三方依赖）
+core/source/dotenv_source/ DotenvSource（自写解析器，无第三方依赖）
 core/source/env_source/    EnvSource      ← @env 按 target 分文件
 core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
 core/source/toml_source/   TomlSource     ← 第三方依赖

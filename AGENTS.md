@@ -29,11 +29,11 @@ Design constraints worth knowing before touching code:
 - Extraction into user structs reuses the compiler's built-in `derive(FromJson)`;
   the library does not generate code or define custom derive traits.
 - Error messages must name the key, the expected type, and the actual type.
-- The module has two packages so far: `MuVirus/moonfig/core` (core) and
-  `MuVirus/moonfig/core/source/json_source` (sources live under the core
-  package, one directory per format). Leaving the alias off binds the directory
-  name, which also compiles, but every `moon.pkg` here spells the alias out
-  (`@config`, `@jsonsrc`) so the short name survives a future directory change.
+- The module is split into packages: `MuVirus/moonfig/core` (core) and format
+  sources under `MuVirus/moonfig/core/source/`, one directory per format.
+  Leaving the alias off binds the directory name, which also compiles, but every
+  `moon.pkg` here spells the alias out (`@config`, `@jsonsrc`) so the short name
+  survives a future directory change.
 - A package must not be named after a core package, not even when every import
   uses an explicit alias. The package name itself occupies a global name, so a
   package called `json` keeps `moonbitlang/core/json` from loading at all and
@@ -48,9 +48,10 @@ directions still to be built, each marked done, in progress or not started.
 `docs/testing.md` is the test convention for this project.
 
 Implemented today: the core package (`Value`, path lookup, merge, error
-handling, `Config`, `MemorySource`, extraction into user structs) and two source
-packages: `core/source/json_source` (`JsonSource`, `to_json`, `extract_from`)
-and `core/source/ini_source` (`IniSource`, hand-written parser).
+handling, `Config`, `MemorySource`, extraction into user structs) and three
+source packages: `core/source/json_source` (`JsonSource`, `to_json`,
+`extract_from`), `core/source/ini_source` (`IniSource`, hand-written parser)
+and `core/source/dotenv_source` (`DotenvSource`, hand-written parser).
 
 ## Project Structure
 
