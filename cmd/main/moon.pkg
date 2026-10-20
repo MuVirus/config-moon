@@ -1,5 +1,0 @@
-// import {
-//   "MuVirus/moonfig/core" @lib,
-// }
-
-pkgtype(kind: "executable")
