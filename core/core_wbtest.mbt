@@ -73,6 +73,7 @@ test "kind name" {
   assert_eq(ValueKind::Int(1L).name(), "Int")
   assert_eq(ValueKind::Float(1.0).name(), "Float")
   assert_eq(ValueKind::Str("s").name(), "Str")
+  assert_eq(ValueKind::Bytes(b"x").name(), "Bytes")
   assert_eq(ValueKind::Array([]).name(), "Array")
   assert_eq(ValueKind::Table(Map([])).name(), "Table")
 }

@@ -89,6 +89,19 @@ pub fn Config::get_float(
 }
 
 ///|
+/// 取路径上的字节串
+pub fn Config::get_bytes(
+  self : Config,
+  path : String,
+) -> Bytes raise ConfigError {
+  let value = self.get_value(path)
+  match value.kind {
+    ValueKind::Bytes(b) => b
+    k => raise ConfigError::TypeMismatch(path, "Bytes", k.name())
+  }
+}
+
+///|
 /// 取路径上的原始值（要自己判断形状时用）
 pub fn Config::get_value(
   self : Config,

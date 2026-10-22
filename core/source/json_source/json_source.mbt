@@ -111,6 +111,9 @@ fn int64_of(literal : String) -> Int64 raise @config.ConfigError {
 ///
 /// `Int` 走 `Json::string`：core 自己就把 `Int64` 序列化成字符串，
 /// 且 `FromJson for Int64` 只吃字符串，两头对称才不丢大整数。
+///
+/// `Bytes` 走 core 的 `ToJson for Bytes`：可打印 ASCII 直通，其余写成
+/// `\xHH`，和 `FromJson for Bytes` 读的是同一套格式，两头对称。
 pub fn to_json(v : @config.Value) -> Json {
   match v.kind {
     @config.ValueKind::Null => Json::null()
@@ -118,6 +121,7 @@ pub fn to_json(v : @config.Value) -> Json {
     @config.ValueKind::Int(i) => Json::string(i.to_string())
     @config.ValueKind::Float(f) => Json::number(f)
     @config.ValueKind::Str(s) => Json::string(s)
+    @config.ValueKind::Bytes(b) => @json.to_json(b)
     @config.ValueKind::Array(arr) => Json::array(arr.map(fn(x) { to_json(x) }))
     @config.ValueKind::Table(t) => {
       let obj = Map([], capacity=t.capacity())

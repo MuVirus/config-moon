@@ -2,12 +2,15 @@
 /// 配置值在内存里的形状。
 ///
 /// 整数一律 `Int64`：中间表示不走浮点，大整数才能原样活到用户手上。
+///
+/// `Bytes` 是二进制数据的形状。文本格式不会产生它，CBOR 这类二进制格式会。
 pub(all) enum ValueKind {
   Null
   Bool(Bool)
   Int(Int64)
   Float(Double)
   Str(String)
+  Bytes(Bytes)
   Array(Array[Value])
   Table(Map[String, Value])
 } derive(Eq, @debug.Debug)
@@ -51,6 +54,12 @@ pub fn Value::str(s : String) -> Value {
 }
 
 ///|
+/// 字节串
+pub fn Value::bytes(b : Bytes) -> Value {
+  { kind: ValueKind::Bytes(b), }
+}
+
+///|
 /// 数组
 pub fn Value::array(arr : Array[Value]) -> Value {
   { kind: ValueKind::Array(arr), }
@@ -84,6 +93,7 @@ pub fn ValueKind::name(self : ValueKind) -> String {
     ValueKind::Int(_) => "Int"
     ValueKind::Float(_) => "Float"
     ValueKind::Str(_) => "Str"
+    ValueKind::Bytes(_) => "Bytes"
     ValueKind::Array(_) => "Array"
     ValueKind::Table(_) => "Table"
   }

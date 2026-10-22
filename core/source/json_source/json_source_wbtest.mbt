@@ -14,6 +14,23 @@ struct NeedsHost {
 pub extend NeedsHost with @json.FromJson::{from_json}
 
 ///|
+/// 只用来验证字节串能提取到结构体的 `Bytes` 字段
+struct NeedsBlob {
+  blob : Bytes
+} derive(@json.FromJson)
+
+///|
+pub extend NeedsBlob with @json.FromJson::{from_json}
+
+///|
+/// `Bytes` 字段能从 `Value` 里原样提取出来
+test "extract reads bytes into a Bytes field" {
+  let raw = b"\x00\x01abcd"
+  let got : NeedsBlob = extract(Value::table({ "blob": Value::bytes(raw) }))
+  assert_eq(got.blob, raw)
+}
+
+///|
 /// Json → Value：整数、浮点、大整数、嵌套结构都要按规矩拆
 test "json_to_value" {
   let json = @json.parse(
@@ -111,6 +128,20 @@ test "to_json keeps int as string" {
     to_json(Value::table({ "a": Value::bool(false) })),
     Json::object({ "a": Json::boolean(false) }),
   )
+}
+
+///|
+/// Value → Json：`Bytes` 走 core 的字节编码，和 `FromJson for Bytes` 对称
+test "to_json keeps bytes and they round-trip" {
+  let raw = b"\x00\x01abcd\"\\"
+  assert_eq(
+    to_json(Value::bytes(raw)),
+    Json::string("\\x00\\x01abcd\\x22\\x5c"),
+  )
+  let back : Bytes = @json.from_json(to_json(Value::bytes(raw))) catch {
+    _ => b""
+  }
+  assert_eq(back, raw)
 }
 
 ///|

@@ -112,6 +112,21 @@ test "getters report expected and actual" {
     type_error_of("Float", () => ignore(cfg.get_float("s"))),
     "s: 期望 Float，实际 Str",
   )
+  assert_eq(
+    type_error_of("Bytes", () => ignore(cfg.get_bytes("s"))),
+    "s: 期望 Bytes，实际 Str",
+  )
+}
+
+///|
+/// 字节串原样取出来
+test "get_bytes returns the raw bytes" {
+  let cfg = Config::new()
+    .add(
+      MemorySource::new(Value::table({ "blob": Value::bytes(b"\x01\x02\xff") })),
+    )
+    .build()
+  assert_eq(cfg.get_bytes("blob"), b"\x01\x02\xff")
 }
 
 ///|
