@@ -30,6 +30,7 @@ keywords = [
   "xml",
   "ini",
   "env",
+  "cbor",
 ]
 
 preferred_target = "native"
@@ -40,4 +41,5 @@ import {
   "Milky2018/xml@0.6.1",
   "moonbit-community/toml@0.5.0",
   "moonbit-community/yaml@0.0.8",
+  "2515050242/cbor@0.1.2",
 }

@@ -40,8 +40,9 @@
 和 `core/source/` 下的来源包：JSON（`JsonSource`、`to_json`、`extract_from`）、
 INI（`IniSource`，解析器自己写）、`.env`（`DotenvSource`，解析器自己写）、
 YAML（`YamlSource`，解析交给 `moonbit-community/yaml`）、
-TOML（`TomlSource`，解析交给 `moonbit-community/toml`）与
-XML（`XmlSource`，解析交给 `Milky2018/xml`）。
+TOML（`TomlSource`，解析交给 `moonbit-community/toml`）、
+XML（`XmlSource`，解析交给 `Milky2018/xml`）与
+CBOR（`CborSource`，解析交给 `2515050242/cbor`）。
 
 ## 项目结构
 

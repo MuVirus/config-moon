@@ -34,15 +34,15 @@
 - [x] `.env` 文本（`core/source/dotenv_source/` 包）
 - [x] INI（`core/source/ini_source/` 包）
 - [x] XML（`core/source/xml_source/` 包，依赖 `Milky2018/xml`）
-- [ ] CBOR —— 嵌入式 / 物联网领域
+- [x] CBOR（`core/source/cbor_source/` 包，依赖 `2515050242/cbor`）
 
 每加一种格式只做一件事：格式 → `Value`。合并、取值、校验都复用核心，不为格式写第二套逻辑。
 
 **格式说的是内容怎么写，来源说的是从哪读。** `.env` 文件是一种格式，环境变量是一种来源，两件事分开做：`EnvSource` 读环境变量时不需要知道它最后变成哪种格式。
 
-**CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子：CBOR 的整数、字符串、数组、映射都是明确标类型的，`Value` 里的六个分支正好对得上，不用为它加特例。
+**CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子——而这个检验的结果是：`Value` 原来少了一个形状。CBOR 有字节串，`Value` 原来没地方放它，所以 `ValueKind` 现在多了一个 `Bytes` 分支，`get_bytes` 把它原样取出来。其余的部分一一对得上：整数、字符串、数组、映射都不用特例。
 
-**代价**：YAML、TOML 和 XML 依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`），CBOR 还没有现成实现。所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
+**代价**：YAML、TOML、XML 和 CBOR 都依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`、`2515050242/cbor`），所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
 
 **JSON、INI 和 `.env` 都是自己写的解析器，没有第三方依赖。** 三者都只用 core 的包：JSON 走 `@json`，INI 和 `.env` 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释；`.env` 的规则也写在包文档里：`export` 前缀可选、键名里的 `.` 变层级、单引号原样保留、双引号认转义、`#` 前面有空白才算行尾注释、不做变量展开。
 
@@ -51,6 +51,8 @@
 **TOML 的语法交给 `moonbit-community/toml`，本库只做 `TomlValue` → `Value` 的转换。** 包文档写明了边界：根节点必须是一张表；数组里混着不同类型时报错（TOML 要求同类型数组）；日期时间在 `Value` 里没有对应形状，按原文当字符串存；大整数保持 `Int64`。
 
 **XML 的语法交给 `Milky2018/xml`，本库只做元素树 → `Value` 的转换。** XML 没有「键值」这回事，映射规则是本库定的，写在包文档里：根元素只是壳，子元素落在顶层；同名兄弟元素收成数组；属性在 `@` 前缀的键上；混合内容在 `#text` 上；CDATA 是字面文字，一定是字符串（这也是 XML 本身给「我要字符串」的办法）。
+
+**CBOR 的语法交给 `2515050242/cbor`，本库只做 `CborValue` → `Value` 的转换。** 包文档写明了边界：根节点必须是一张映射；映射的键必须是文本字符串（CBOR 允许整数键，但配置里的键就是路径，路径是文本，整数键报错而不是偷偷转成字符串——那样整数键 `1` 会和字符串键 `"1"` 撞车）；标签被剥掉，只留里面的值（`Value` 没地方放标签）；`undefined` 报错（它和 `null` 不是一回事，`null` 落到 `Value::null()`）；字节串原样保留在 `Value::bytes` 里，`get_bytes` 取出原始字节；整数超出 `Int64` 报错，不静默降级成浮点；半精度和单精度浮点都展宽到 `Double`。
 
 ---
 
@@ -127,3 +129,4 @@
 | `from_json` 到 `Double`，输入字符串 `"1.5"` | 失败 `Double::from_json: expected number` | 字符串自动转数字在 Json 层做不到 |
 | `from_json` 到 `Bool`，输入字符串 `"true"` | 失败 `Bool::from_json: expected boolean` | 同上 |
 | `from_json` 到 `Int`，输入 `5432.7` | 成功，得 `5432` | **静默截断**，不报错 |
+| registry 上的 CBOR 库 | `mizchi/cbor`（下载量最高）用的是旧的 `moon.mod.json`，当前工具链拒绝安装 | 只能从 `2515050242/cbor`（纯 MoonBit、零传递依赖、完整 RFC 8949）和 `f4ah6o/simple-webauthn/cbor`（同样零依赖，但是子集：不支持半精度/单精度浮点、不支持不定长容器、而且**静默忽略尾随字节**）里选 |

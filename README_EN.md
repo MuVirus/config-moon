@@ -20,7 +20,7 @@ A native configuration library for MoonBit.
 ## Features
 
 - **Type-safe configuration**: `derive(FromJson)` generates the deserialization for your config struct, so extracting a value yields that type directly. No code generator, no custom derive trait — MoonBit's own derive mechanism does the work
-- **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, or a hand-built `Value` tree can each act as a source
+- **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
 
@@ -91,7 +91,7 @@ let db : DbCfg = extract_from(cfg, "db")
 | Status | Direction | Items |
 |---|---|---|
 | 🚧 | **Core** | One value type for configuration, merge by key, read by key, read by struct, error handling |
-| 🚧 | **Many formats** | CBOR, letting other formats plug in |
+| 🚧 | **Many formats** | letting other formats plug in |
 | ⬜ | **External sources** | Configuration files, environment variables, any combination of sources |
 | ⬜ | **Validation** | Required keys, value ranges, custom rules |
 | ⬜ | **Format detection** | By suffix, by content, an error when neither decides |

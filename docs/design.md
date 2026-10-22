@@ -14,6 +14,7 @@ pub enum ValueKind {
   Int(Int64)              // 所有整数统一用 Int64
   Float(Double)
   Str(String)
+  Bytes(Bytes)            // 二进制数据，只有 CBOR 这类二进制格式会产生
   Array(Array[Value])
   Table(Map[String, Value])
 }
@@ -134,6 +135,7 @@ pub(open) trait Source {
 - `YamlSource` —— YAML 文本 → `Value`（解析用 `moonbit-community/yaml`）
 - `TomlSource` —— TOML 文本 → `Value`（解析用 `moonbit-community/toml`）
 - `XmlSource` —— XML 文本 → `Value`（解析用 `Milky2018/xml`）
+- `CborSource` —— CBOR 字节 → `Value`（解析用 `2515050242/cbor`）
 
 编程式构造一棵表：
 
@@ -162,6 +164,7 @@ let cfg = Config::new()
 cfg.get_string("db.host")        // String
 cfg.get_int("db.port")           // Int64
 cfg.get_bool("debug")            // Bool
+cfg.get_bytes("cert")            // Bytes
 ```
 
 - 路径用点号展开：`"db.host"` → `Table{"db": Table{"host": ...}}`
@@ -200,10 +203,13 @@ pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 | `Float` | `Json::number` |
 | `Bool` | `Json::bool` |
 | `Str` | `Json::string` |
+| `Bytes` | `Json::string(...)`，走 core 的字节编码 |
 | `Null` | `Json::null` |
 | `Array` / `Table` | 递归 |
 
 `Int` 走字符串的根据：core 自己把 `Int64` 序列化成 JSON 字符串（`@json.to_json(9007199254740993L)` → `String(9007199254740993)`），且 `FromJson for Int64` 第一行 `guard json is String(str)`（`/mnt/c/Users/MrVirus/.moon/lib/core/json/from_json.mbt:72-83`）。双向对称，大整数无损。
+
+`Bytes` 是同一个道理：core 的 `ToJson for Bytes` 把可打印 ASCII 原样输出、其余写成 `\xHH`，而 `FromJson for Bytes` 读的就是同一套格式（`moonbitlang/core/json/from_json.mbt:309`）。两头都是 core 的实现，不用库自己写编码器，也不会和 core 走偏。
 
 ---
 
@@ -226,6 +232,7 @@ core/source/dotenv_source/ DotenvSource（自写解析器，无第三方依赖�
 core/source/yaml_source/   YamlSource（依赖 moonbit-community/yaml）
 core/source/toml_source/   TomlSource（依赖 moonbit-community/toml）
 core/source/xml_source/    XmlSource（依赖 Milky2018/xml）
+core/source/cbor_source/   CborSource（依赖 2515050242/cbor）
 core/source/env_source/    EnvSource      ← @env 按 target 分文件
 core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
 ```
@@ -249,6 +256,13 @@ core/source/file_source/   FileSource     ← 自写 FFI，按 target 分文件
 > 所以 `Value::to_json` → `to_json(v)`，`Config::extract` → `extract_from(cfg, path)`。
 > 自由函数不受影响（`extract(v)` 本来就是自由函数）。设计新 API 时要提前想清楚
 > 哪些函数将来可能需要跨包——**能用自由函数就别用方法**。
+
+> **2026-10 决定：`Value` 加 `Bytes` 分支。**
+> CBOR 是第一个会产出字节串的格式，而 `Value` 原来没有放字节串的地方。
+> 加分支的机械成本很低：全库只有两处对 `ValueKind` 做穷尽匹配
+> （`ValueKind::name` 和 `to_json`），`merge` / `get_path` / 各个 `get_*`
+> 都只匹配自己关心的形状，不用改。加了之后 `Value` 才真的覆盖了所有格式的取值，
+> 「提取到结构体」这条主线也不断——结构体里的 `Bytes` 字段能原样提取出来。
 
 | 步 | 内容 | 验收 |
 |---|---|---|

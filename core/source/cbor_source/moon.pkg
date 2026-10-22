@@ -1,0 +1,13 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "2515050242/cbor",
+}
+
+import {
+  "MuVirus/moonfig/core" @config,
+} for "test"
+
+import {
+  "MuVirus/moonfig/core" @config,
+  "2515050242/cbor",
+} for "wbtest"
