@@ -110,11 +110,11 @@ test "is_int64" {
 }
 
 ///|
-/// Value → Json：`Int` 必须走字符串，否则大整数回不来
-test "to_json keeps int as string" {
+/// Value → Json：`Int` 走数字，同时带 `repr` 保住原文
+test "to_json keeps int as number with repr" {
   assert_eq(
     to_json(Value::int(9007199254740993L)),
-    Json::string("9007199254740993"),
+    Json::number(9007199254740992.0, repr="9007199254740993"),
   )
   assert_eq(to_json(Value::float(1.5)), Json::number(1.5))
   assert_eq(to_json(Value::null()), Json::null())
@@ -122,11 +122,20 @@ test "to_json keeps int as string" {
   assert_eq(to_json(Value::str("x")), Json::string("x"))
   assert_eq(
     to_json(Value::array([Value::int(1L)])),
-    Json::array([Json::string("1")]),
+    Json::array([Json::number(1.0, repr="1")]),
   )
   assert_eq(
     to_json(Value::table({ "a": Value::bool(false) })),
     Json::object({ "a": Json::boolean(false) }),
+  )
+}
+
+///|
+/// `repr` 让 stringify 也保持原文
+test "to_json int stringify keeps exact text" {
+  assert_eq(
+    to_json(Value::int(9007199254740993L)).stringify(),
+    "9007199254740993",
   )
 }
 
@@ -145,17 +154,87 @@ test "to_json keeps bytes and they round-trip" {
 }
 
 ///|
-/// 字段对不上就报 ParseError，不能静默变默认值
+/// 字段缺失报 MissingKey，类型不符报 TypeMismatch，不能静默变默认值
 test "extract reports shape mismatch" {
   let good : NeedsHost = extract(Value::table({ "host": Value::str("x") }))
   assert_eq(good.host, "x")
-  let failed = try {
+  let missing = try {
     let bad : NeedsHost = extract(Value::table({ "port": Value::int(1L) }))
     ignore(bad)
     false
   } catch {
-    ConfigError::ParseError(_) => true
+    ConfigError::MissingKey(path) => path == "host"
     _ => false
   }
-  assert_true(failed)
+  assert_true(missing)
+  let mismatch = try {
+    let bad : NeedsHost = extract(Value::table({ "host": Value::int(1L) }))
+    ignore(bad)
+    false
+  } catch {
+    ConfigError::TypeMismatch(path, expected, actual) =>
+      path == "host" && expected == "Str" && actual == "Int"
+    _ => false
+  }
+  assert_true(mismatch)
+}
+
+///|
+/// 64 位包装类型只认整数，字符串和浮点都不收
+test "Int64Text rejects non-integer shapes" {
+  let from_string = try {
+    let bad : Int64Text = @json.from_json(Json::string("5432"))
+    ignore(bad)
+    false
+  } catch {
+    @json.JsonDecodeError(_) => true
+  }
+  assert_true(from_string)
+  let from_float = try {
+    let bad : Int64Text = @json.from_json(Json::number(1.5))
+    ignore(bad)
+    false
+  } catch {
+    @json.JsonDecodeError(_) => true
+  }
+  assert_true(from_float)
+}
+
+///|
+/// 大整数、负数和 UInt64 都按原文还原
+test "Int64Text and UInt64Text parse exactly" {
+  let big : Int64Text = @json.from_json(
+    to_json(Value::int(-9223372036854775807L)),
+  )
+  assert_eq(big.to_int64(), -9223372036854775807L)
+  let unsigned : UInt64Text = @json.from_json(
+    to_json(Value::int(9007199254740993L)),
+  )
+  assert_eq(unsigned.to_uint64(), 9007199254740993UL)
+}
+
+///|
+/// JSON Pointer 的段要按 RFC 6901 反转义
+test "pointer_segments" {
+  assert_eq(pointer_segments(""), [])
+  assert_eq(pointer_segments("/db/port"), ["db", "port"])
+  assert_eq(pointer_segments("/a~1b/c~0d"), ["a/b", "c~d"])
+  assert_eq(index_of("0"), Some(0))
+  assert_eq(index_of("12"), Some(12))
+  assert_eq(index_of("-1"), None)
+  assert_eq(index_of("x"), None)
+}
+
+///|
+/// 按键路径反查实际类型
+test "value_at" {
+  let v = Value::table({
+    "db": Value::table({
+      "port": Value::int(1L),
+      "list": Value::array([Value::str("x")]),
+    }),
+  })
+  assert_eq(value_at(v, ["db", "port"]).unwrap().kind, ValueKind::Int(1L))
+  assert_eq(value_at(v, ["db", "list", "0"]).unwrap().kind, ValueKind::Str("x"))
+  assert_eq(value_at(v, ["db", "nope"]), None)
 }

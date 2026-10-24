@@ -156,6 +156,20 @@ struct DbCfg {
 let db : DbCfg = extract_from(cfg, "db")
 ```
 
+For 64-bit fields use `Int64Text`: core's `FromJson for Int64` only accepts a JSON
+string, which does not match this library's integer mapping.
+
+```moonbit nocheck
+using @jsonsrc {extract_from, Int64Text}
+
+struct OrderCfg {
+  id : Int64Text
+} derive(FromJson)
+
+let order : OrderCfg = extract_from(cfg, "order")
+order.id.to_int64()   // 9007199254740993, exact even beyond Double's range
+```
+
 ### When it fails
 
 A missing key and a type mismatch raise `MissingKey` / `TypeMismatch`; the
@@ -171,6 +185,9 @@ try {
 
 The code above prints `配置项 db.host 类型不符：期望 Int，实际 Str`; a missing
 key prints `配置项 db.user 不存在：没有任何来源提供它`.
+
+`extract_from` fails the same way: a missing field raises `MissingKey`, a type
+mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`).
 
 ---
 

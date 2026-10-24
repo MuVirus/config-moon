@@ -74,14 +74,15 @@ cfg.get_bool("debug")       // false
 ```moonbit
 struct DbCfg {
   host : String
-  port : Int64
+  port : Int
 } derive(FromJson)
 
 let db : DbCfg = extract(cfg.get_value("db"))
 println(db.host)   // "localhost"
 ```
 
-`DbCfg` 用编译器自带的 `derive(FromJson)`，库不需要为用户类型写任何东西。
+`DbCfg` 用编译器自带的 `derive(FromJson)`。结构体里的 64 位字段写 `Int64Text`（见 §7），
+因为 core 的 `FromJson for Int64` 只吃 JSON 字符串，和本库的整数映射对不上。
 
 ### 2.4 出错时
 
@@ -193,13 +194,18 @@ pub suberror ConfigError {
 pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 ```
 
-实现只有一句：`@json.from_json(v.to_json())`。
+实现是 `@json.from_json(to_json(v))`，但整数映射有一个绕不过去的矛盾：
 
-转换规矩（已实测）：
+| 字段类型 | core 的 `from_json` 只认 |
+|---|---|
+| `Int` / `Int32` | `Json::Number`（±2^31 范围检查） |
+| `Int64` / `UInt64` | `Json::String`（只吃字符串） |
+
+`extract[T : FromJson]` 只有值级约束，看不到字段类型，所以一棵 Json 树不可能同时满足两者。取舍是：**统一映射成数字**，64 位字段用包装类型。
 
 | ValueKind | → Json |
 |---|---|
-| `Int` | `Json::string(...)`，**不是** `Json::number` |
+| `Int` | `Json::number(i.to_double(), repr=i.to_string())` |
 | `Float` | `Json::number` |
 | `Bool` | `Json::bool` |
 | `Str` | `Json::string` |
@@ -207,9 +213,24 @@ pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 | `Null` | `Json::null` |
 | `Array` / `Table` | 递归 |
 
-`Int` 走字符串的根据：core 自己把 `Int64` 序列化成 JSON 字符串（`@json.to_json(9007199254740993L)` → `String(9007199254740993)`），且 `FromJson for Int64` 第一行 `guard json is String(str)`（`/mnt/c/Users/MrVirus/.moon/lib/core/json/from_json.mbt:72-83`）。双向对称，大整数无损。
+`repr` 是 core 自己的字段：`Json::stringify` 优先写它，所以 `to_json(Value::int(9007199254740993L)).stringify()` 仍是原文 `9007199254740993`，不经过 `Double` 丢精度。`Int64Text` / `UInt64Text` 也读它，结构体里的 64 位字段写 `id : Int64Text`，`to_int64()` 取回原值。
+
+代价：`Double` 字段收到超出 2^53 的整数会按 `Double` 取近似值（`Double` 本来就装不下）；`Int` 字段超出 ±2^31 由 core 报 overflow，库翻成「超出 Int 范围」。
 
 `Bytes` 是同一个道理：core 的 `ToJson for Bytes` 把可打印 ASCII 原样输出、其余写成 `\xHH`，而 `FromJson for Bytes` 读的就是同一套格式（`moonbitlang/core/json/from_json.mbt:309`）。两头都是 core 的实现，不用库自己写编码器，也不会和 core 走偏。
+
+### 7.1 错误消息
+
+`derive(FromJson)` 抛的是 `JsonDecodeError((JsonPath, String))`，`JsonPath` 的 `Show` 是 JSON Pointer（`/db/port`）。`extract` 拿这个路径反查 `Value`，翻成和 `get_*` 同一套错误：
+
+| 情况 | 错误 |
+|---|---|
+| 字段缺失（`Missing field port`） | `MissingKey("db.port")` |
+| 类型不符（`Int::from_json: expected number`） | `TypeMismatch("db.port", "Int", "Str")` |
+| 整数溢出（`Int::from_json: overflow`） | `ParseError("配置项 db.port 超出 Int 范围")` |
+| 结构体写了 `Int64`（`expected number in string representation`） | `ParseError("配置项 db.port 是 64 位整数：结构体字段请声明为 Int64Text，或改用 get_int")` |
+
+期望类型从 core 的消息前缀取（`String` → `Str`，`Double` → `Float`，`Map` → `Table`），实际类型从 `Value` 反查，所以消息里的名字和 `get_*` 一致。
 
 ---
 
@@ -226,7 +247,7 @@ core/memory.mbt   MemorySource
 core/config.mbt   Config 构建器 + get_string / get_int / get_bool / get_float
 
 来源包（各自 import 核心，按需加依赖）
-core/source/json_source/   JsonSource + to_json + extract
+core/source/json_source/   JsonSource + to_json + extract + Int64Text / UInt64Text
 core/source/ini_source/    IniSource（自写解析器，无第三方依赖）
 core/source/dotenv_source/ DotenvSource（自写解析器，无第三方依赖）
 core/source/yaml_source/   YamlSource（依赖 moonbit-community/yaml）

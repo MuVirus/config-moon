@@ -109,8 +109,10 @@ fn int64_of(literal : String) -> Int64 raise @config.ConfigError {
 /// （`4059: Cannot define method for foreign type`），所以核心里的
 /// `Value::to_json` 在拆分时只能降级成这样。
 ///
-/// `Int` 走 `Json::string`：core 自己就把 `Int64` 序列化成字符串，
-/// 且 `FromJson for Int64` 只吃字符串，两头对称才不丢大整数。
+/// `Int` 走 `Json::number`，同时把原文塞进 `repr`：`FromJson for Int` 这类
+/// 只认数字的字段能取到值，`repr` 又让超出 `Double` 精确范围的整数不丢精度
+/// （`Json::stringify` 用的也是 `repr`）。代价是 `FromJson for Int64` 仍只吃
+/// 字符串，结构体里的 64 位字段要写 `Int64Text`，见 `extract.mbt`。
 ///
 /// `Bytes` 走 core 的 `ToJson for Bytes`：可打印 ASCII 直通，其余写成
 /// `\xHH`，和 `FromJson for Bytes` 读的是同一套格式，两头对称。
@@ -118,7 +120,7 @@ pub fn to_json(v : @config.Value) -> Json {
   match v.kind {
     @config.ValueKind::Null => Json::null()
     @config.ValueKind::Bool(b) => Json::boolean(b)
-    @config.ValueKind::Int(i) => Json::string(i.to_string())
+    @config.ValueKind::Int(i) => Json::number(i.to_double(), repr=i.to_string())
     @config.ValueKind::Float(f) => Json::number(f)
     @config.ValueKind::Str(s) => Json::string(s)
     @config.ValueKind::Bytes(b) => @json.to_json(b)
@@ -133,26 +135,4 @@ pub fn to_json(v : @config.Value) -> Json {
   }
 }
 
-///|
-/// 提取到结构体：`Value` → `Json` → `FromJson`。
-///
-/// 用户的类型用编译器自带的 `derive(FromJson)`，库不生成任何代码。
-pub fn[T : @json.FromJson] extract(
-  v : @config.Value,
-) -> T raise @config.ConfigError {
-  @json.from_json(to_json(v)) catch {
-    e =>
-      raise @config.ConfigError::ParseError("提取到结构体失败：\{e}")
-  }
-}
-
-///|
-/// 取配置里某个路径的值并提取成用户结构体。
-///
-/// 原来是 `Config::extract`，拆分时降级成自由函数——理由同 `to_json`。
-pub fn[T : @json.FromJson] extract_from(
-  cfg : @config.Config,
-  path : String,
-) -> T raise @config.ConfigError {
-  extract(cfg.get_value(path))
-}
+// extract / extract_from 在 extract.mbt：那里还要处理 64 位包装类型和错误翻译

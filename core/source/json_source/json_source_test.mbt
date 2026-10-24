@@ -10,11 +10,30 @@ using @json_source {type JsonSource, extract, extract_from}
 /// 用户自己的类型只要 `derive(FromJson)`，库不生成任何代码
 struct DbCfg {
   host : String
-  port : Int64
+  port : Int32
 } derive(@json.FromJson)
 
 ///|
 pub extend DbCfg with @json.FromJson::{from_json}
+
+///|
+/// 64 位字段写 `Int64Text`：core 的 `Int64` 只吃 JSON 字符串，和本库的整数映射对不上
+struct BigCfg {
+  id : @json_source.Int64Text
+} derive(@json.FromJson)
+
+///|
+pub extend BigCfg with @json.FromJson::{from_json}
+
+///|
+/// 只用来验证「直接写 Int64」时的报错，不参与别的测试
+#warnings("-unused_field")
+struct LegacyCfg {
+  id : Int64
+} derive(@json.FromJson)
+
+///|
+pub extend LegacyCfg with @json.FromJson::{from_json}
 
 ///|
 /// 整数值取 `Int`，带小数的取 `Float`
@@ -67,7 +86,71 @@ test "extract into user struct" {
     .build()
   let db : DbCfg = extract_from(cfg, "db")
   assert_eq(db.host, "localhost")
-  assert_eq(db.port, 5432L)
+  assert_eq(db.port, 5432)
+}
+
+///|
+/// 结构体里的 64 位字段用 `Int64Text`，超出 Double 精度也不丢
+test "extract keeps 64-bit field exact" {
+  let cfg = Config::new()
+    .add(JsonSource::from_str("{\"db\": {\"id\": 9007199254740993}}"))
+    .build()
+  let big : BigCfg = extract_from(cfg, "db")
+  assert_eq(big.id.to_int64(), 9007199254740993L)
+}
+
+///|
+/// 结构体里直接写 Int64：报错并给出改法
+test "extract explains Int64 fields" {
+  let cfg = Config::new()
+    .add(JsonSource::from_str("{\"db\": {\"id\": 5432}}"))
+    .build()
+  let message = try {
+    let legacy : LegacyCfg = extract_from(cfg, "db")
+    ignore(legacy)
+    ""
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    message, "解析失败：配置项 db.id 是 64 位整数：结构体字段请声明为 Int64Text，或改用 get_int",
+  )
+}
+
+///|
+/// 64 位字段也不接受字符串来源：严格类型不做隐式转换
+test "Int64Text rejects string source" {
+  let cfg = Config::new()
+    .add(JsonSource::from_str("{\"db\": {\"id\": \"5432\"}}"))
+    .build()
+  let message = try {
+    let big : BigCfg = extract_from(cfg, "db")
+    ignore(big)
+    ""
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 db.id 类型不符：期望 Int64，实际 Str")
+}
+
+///|
+/// 提取失败也报键名、期望类型、实际类型
+test "extract reports key and types" {
+  let cfg = Config::new()
+    .add(
+      JsonSource::from_str(
+        "{\"db\": {\"host\": \"localhost\", \"port\": \"5432\"}}",
+      ),
+    )
+    .build()
+  let message = try {
+    let db : DbCfg = extract_from(cfg, "db")
+    ignore(db)
+    ""
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 db.port 类型不符：期望 Int，实际 Str")
 }
 
 ///|

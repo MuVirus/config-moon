@@ -151,6 +151,19 @@ struct DbCfg {
 let db : DbCfg = extract_from(cfg, "db")
 ```
 
+64 位字段写 `Int64Text`：core 的 `FromJson for Int64` 只接受 JSON 字符串，和本库的整数映射对不上。
+
+```moonbit nocheck
+using @jsonsrc {extract_from, Int64Text}
+
+struct OrderCfg {
+  id : Int64Text
+} derive(FromJson)
+
+let order : OrderCfg = extract_from(cfg, "order")
+order.id.to_int64()   // 9007199254740993，超出 Double 精确范围也不丢
+```
+
 ### 出错时
 
 缺键和类型不符分别报 `MissingKey` / `TypeMismatch`，默认消息带键名、期望类型和实际类型：
@@ -165,6 +178,9 @@ try {
 
 上面得到 `配置项 db.host 类型不符：期望 Int，实际 Str`；缺键则得到
 `配置项 db.user 不存在：没有任何来源提供它`。
+
+`extract_from` 的失败走同一套：字段缺失报 `MissingKey`，类型不符报 `TypeMismatch`，
+路径带上配置路径（`db.port`）。
 
 ---
 

@@ -102,7 +102,7 @@ fn main raise {
   println("")
   println("== 提取到结构体 ==")
   println("数字来源   -> NumericPort  \{n_num}") // port = 5432，name = main
-  println("数字来源   -> TextualPort  \{n_txt}") // 报错：期望字符串，实际数字
-  println("字符串来源 -> NumericPort  \{t_num}") // 报错：期望数字，实际字符串
+  println("数字来源   -> TextualPort  \{n_txt}") // 报错：配置项 db.port 类型不符：期望 Str，实际 Int
+  println("字符串来源 -> NumericPort  \{t_num}") // 报错：配置项 db.port 类型不符：期望 Int，实际 Str
   println("字符串来源 -> TextualPort  \{t_txt}") // port = "5432"，name = main
 }
