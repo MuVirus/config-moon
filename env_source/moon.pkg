@@ -1,0 +1,10 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/core/env",
+}
+
+import {
+  "MuVirus/moonfig/env_source",
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/core/env",
+} for "test"

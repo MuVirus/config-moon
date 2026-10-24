@@ -424,3 +424,30 @@ test "origin_of returns none when the path crosses a scalar" {
   }
   assert_eq(result, "没有来源")
 }
+
+///|
+/// 字面量猜类型：环境变量和命令行共用这一套
+test "Value::from_literal infers bool, int, float and string" {
+  assert_eq(Value::from_literal("true").kind, ValueKind::Bool(true))
+  assert_eq(Value::from_literal("false").kind, ValueKind::Bool(false))
+  assert_eq(Value::from_literal("5432").kind, ValueKind::Int(5432L))
+  assert_eq(Value::from_literal("-7").kind, ValueKind::Int(-7L))
+  assert_eq(Value::from_literal("0.5").kind, ValueKind::Float(0.5))
+  assert_eq(Value::from_literal("1e2").kind, ValueKind::Float(100.0))
+  assert_eq(Value::from_literal("localhost").kind, ValueKind::Str("localhost"))
+  assert_eq(Value::from_literal("").kind, ValueKind::Str(""))
+  assert_eq(Value::from_literal("1.2.3").kind, ValueKind::Str("1.2.3"))
+}
+
+///|
+/// 整数超出 `Int64` 时报错，不静默降级成浮点或字符串
+test "Value::from_literal reports integer overflow" {
+  let message = try {
+    ignore(Value::from_literal("99999999999999999999"))
+    "没有报错"
+  } catch {
+    ConfigError::ParseError(message) => message
+    e => e.to_string()
+  }
+  assert_true(message.contains("Int64"))
+}

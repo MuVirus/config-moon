@@ -28,6 +28,23 @@ pub(open) trait Source {
 没有 `JsonSource`、`TomlSource` 这类类型。它们只是「字符串 + 某种格式」，写成 `StringSource` 加 `JsonFormat` 就够了；每种格式再包一个 Source，只会让「格式」和「从哪读」继续混在一起。
 
 `EnvSource`、`CliSource` 不用 `Format`：它们的输入是键值对和 argv，不是一段文本或字节。
+它们和 `dotenv_format` 一样要猜类型，但猜法必须跨包共用，所以核心提供一个自由函数：
+
+```moonbit
+pub fn Value::from_literal(StringView) -> Value raise ConfigError
+```
+
+`true` / `false` → `Bool`，整数 → `Int64`，带小数点或指数的 → `Float`，其余 → 字符串；
+整数超出 `Int64` 报 `ParseError`，不静默降级。类型推断必须在这一层做完，等到按结构体取值时，
+标准库的 `Bool::from_json` / `Double::from_json` 都拒收字符串。
+
+`EnvSource` 的规则：只读指定前缀的变量，前缀不参与键名；`_` 和 `.` 都算层级，键名统一转小写；
+每个叶子自带 `Origin`，标签是具体变量名（`env:APP_DB_PORT`）。标量占了层级名、或两个变量落到同一个
+路径时报 `ParseError`，不按遍历顺序猜赢家。
+
+`CliSource` 的规则：只认 `--key=value` / `--flag` / `--no-flag`，`--` 之后全是位置参数，
+其它参数一律忽略；`-` 和 `.` 都算层级；同一个键写两次后写的赢，但标量和层级互相挡路时报错；
+标签是不带值的参数名（`cli:--log-level`），密码不会漏进日志。
 
 ## `core/` 里放什么
 
@@ -80,7 +97,7 @@ pub(open) trait Source {
 
 `Format` 不打标——同一个 `JsonFormat` 可能解析内存字符串，也可能解析文件，它不知道位置。
 
-`Config::merged` 在每次 `collect()` 后递归给整棵树写 origin，再 merge；`build` 清掉 `sources` 也不丢信息。合并时 origin 跟着赢家走，表节点取覆盖方的 origin。
+`Config::merged` 在每次 `collect()` 后递归给整棵树写 origin，再 merge；`build` 清掉 `sources` 也不丢信息。合并时 origin 跟着赢家走，表节点取覆盖方的 origin。已经有 origin 的节点不会被覆盖——环境变量、命令行就是先给每个叶子标好来源，再由 `Config` 补剩下的节点。
 
 ### 展示与反推
 
@@ -96,7 +113,9 @@ pub(open) trait Source {
 
 MoonBit 没有 trait object 的 downcast，所以拿不回具体的 `Path` 类型；能做的事必须定义在 `Locator` 上。想直接操作 `Path`，只能把平台类型放进 core 或让 `Value` 泛型化，两者都不做。
 
-`locator` 现在留空：只有 `MemorySource` 时没有可反推的对象。等 `FileSource` 落地再填，接口按真实的平台类型定，而不是先拍一个。
+`FileSource` 的路径就是 `String`，和 `moonbitlang/x/fs` 的接口一致，所以 `locator` 直接放 `FileSource` 自己：
+`origin_of(...)` 拿到的 `locator` 调一次 `read()` 就重新读出同一份字节。读文件失败报 `ConfigError::IoError`，
+消息里带路径和底层原因；解析失败仍是 `ParseError`。
 
 不用 `String?` 当来源：消费端得靠 `starts_with("file:")` 判断，前缀拼错、漏解析都不会报错；enum 能穷尽匹配。
 

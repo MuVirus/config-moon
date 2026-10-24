@@ -1,0 +1,11 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/x/fs",
+}
+
+import {
+  "MuVirus/moonfig/file_source",
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/x/fs",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

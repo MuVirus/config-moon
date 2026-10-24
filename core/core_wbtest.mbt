@@ -94,6 +94,10 @@ test "config error messages" {
     "解析失败：坏文本",
   )
   assert_eq(
+    ConfigError::IoError("文件 config.json：找不到").to_string(),
+    "读取失败：文件 config.json：找不到",
+  )
+  assert_eq(
     ConfigError::MergeConflict("db", "Table", "Str").to_string(),
     "配置项 db 合并冲突：Table 与 Str",
   )
@@ -185,4 +189,23 @@ test "attach_origin without origin leaves the tree alone" {
   let nodes = []
   node_origins(value, "", nodes)
   assert_eq(nodes.length(), 0)
+}
+
+///|
+/// 节点自己带了来源就保留，只给没标的节点补
+test "attach_origin keeps origins already on the tree" {
+  let value = Value::table({
+    "a": Value::int(1L).with_origin(Origin::new(SourceKind::Env, "env:A")),
+    "b": Value::int(2L),
+  })
+  let nodes = []
+  node_origins(
+    attach_origin(value, Some(Origin::new(SourceKind::Env, "env:APP"))),
+    "",
+    nodes,
+  )
+  let labels = nodes.map(fn(pair) { "\{pair.0}=\{pair.1}" })
+  assert_true(labels.contains("a=env:A"))
+  assert_true(labels.contains("b=env:APP"))
+  assert_true(labels.contains("=env:APP"))
 }

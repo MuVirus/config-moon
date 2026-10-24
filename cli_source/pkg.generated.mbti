@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/cli_source"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CliSource {
+  args : Array[String]
+}
+pub fn CliSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn CliSource::from_args(Array[String]) -> Self
+pub fn CliSource::new() -> Self
+pub fn CliSource::origin(Self) -> @core.Origin?
+pub impl @core.Source for CliSource
+
+// Type aliases
+
+// Traits

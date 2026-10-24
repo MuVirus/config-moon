@@ -22,6 +22,7 @@ A native configuration library for MoonBit.
 - **Type-safe configuration**: `derive(FromJson)` generates the deserialization for your config struct, so extracting a value yields that type directly. No code generator, no custom derive trait — MoonBit's own derive mechanism does the work
 - **Strict typing**: every read and every extraction checks the declared type; nothing is converted implicitly, and a mismatch is an error
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
+- **Layered sources**: in-memory defaults, config files, environment variables and command-line flags stack in the order you add them, later ones winning
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
 - **Traceable origins**: `origin_of` / `origins()` tell you which layer a value finally came from
@@ -49,7 +50,9 @@ The core package `core/` provides `MemorySource`, `StringSource` and
 other format has a package of its own, named `core/format/<format>_format` and
 exposing only `XxxFormat`; add the one you need to your `moon.pkg` and combine it
 with `StringSource` / `BytesSource`. The mapping rules live in each package's doc
-comment.
+comment. The file, environment and command-line sources live in `file_source/`,
+`env_source/` and `cli_source/` at the module root; see
+[below](#files-environment-variables-command-line).
 
 Stack two sources and the later one wins:
 
@@ -145,6 +148,37 @@ cfg.get_int("db.port")      // 6543          the last one wins
 
 The default rule is `LastWins`. Use `.with_rule(MergeRule::FirstWins)` to flip the order, `MergeRule::ByKind([...])` to rank by source kind, or pass a custom function.
 
+### Files, environment variables, command line
+
+Each external source is a package of its own, separate from the format packages:
+
+```moonbit nocheck
+import {
+  "MuVirus/moonfig/file_source" @file_source,
+  "MuVirus/moonfig/env_source" @env_source,
+  "MuVirus/moonfig/cli_source" @cli_source,
+}
+```
+
+```moonbit nocheck
+using @config {type Config, type MemorySource, type Value}
+using @jsonfmt {type JsonFormat}
+using @file_source {type FileSource}
+using @env_source {type EnvSource}
+using @cli_source {type CliSource}
+
+let cfg = Config::new()
+  .add(MemorySource::new(Value::table({ "db": Value::table({ "port": Value::int(5432L) }) })))
+  .add(FileSource::new("config/app.json", JsonFormat::new()))  // reads the file, format of your choice
+  .add(EnvSource::new("APP_"))                                  // APP_DB_PORT=6543 → db.port
+  .add(CliSource::new())                                        // --log-level=debug → log.level
+  .build()
+```
+
+- `FileSource`: a path plus a `Format`. A missing file raises `IoError` (with the path), a bad payload raises `ParseError`; the `locator` from `origin_of` can read the same file again.
+- `EnvSource`: reads only variables with the given prefix; both `_` and `.` split levels, names are lowercased, and values are inferred from their text (`"5432"` → `Int`, `"true"` → `Bool`). `EnvSource::all()` reads every variable. A scalar in the way of a branch, or two variables landing on one path, is an error rather than a guess.
+- `CliSource`: accepts `--key=value`, `--flag` and `--no-flag`; everything after `--` is positional. The same key twice means the later one wins, but a scalar and a branch in each other's way is an error. The label is the argument name without its value, so passwords never reach the logs.
+
 ### Source tracking
 
 Every value remembers the layer it came from, so you can ask after reading:
@@ -223,7 +257,7 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 |---|---|---|
 | 🚧 | **Core** | One value type for configuration, merge by key, read by key, read by struct, error handling |
 | 🚧 | **Many formats** | letting other formats plug in |
-| ⬜ | **External sources** | Configuration files, environment variables, any combination of sources |
+| ✅ | **External sources** | Configuration files, environment variables, any combination of sources |
 | 🚧 | **Source tracking** | Which layer a key finally came from |
 | ⬜ | **Validation** | Required keys, value ranges, custom rules |
 | ⬜ | **Format detection** | By suffix, by content, an error when neither decides |

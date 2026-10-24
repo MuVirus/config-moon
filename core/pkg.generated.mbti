@@ -12,6 +12,7 @@ pub(all) suberror ConfigError {
   MissingKey(String)
   TypeMismatch(String, String, String)
   ParseError(String)
+  IoError(String)
   MergeConflict(String, String, String)
 } derive(Eq, @debug.Debug)
 pub fn ConfigError::equal(Self, Self) -> Bool
@@ -100,6 +101,7 @@ pub fn Value::bool(Bool) -> Self
 pub fn Value::bytes(Bytes) -> Self
 pub fn Value::equal(Self, Self) -> Bool
 pub fn Value::float(Double) -> Self
+pub fn Value::from_literal(StringView) -> Self raise ConfigError
 pub fn Value::get_path(Self, String) -> Self raise ConfigError
 pub fn Value::int(Int64) -> Self
 pub fn Value::not_equal(Self, Self) -> Bool
@@ -107,6 +109,7 @@ pub fn Value::null() -> Self
 pub fn Value::str(String) -> Self
 pub fn Value::table(Map[String, Self]) -> Self
 pub fn Value::to_repr(Self) -> @debug.Repr
+pub fn Value::with_origin(Self, Origin) -> Self
 pub impl Eq for Value
 pub impl @debug.Debug for Value
 

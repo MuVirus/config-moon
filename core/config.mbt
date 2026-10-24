@@ -95,27 +95,35 @@ fn Config::ordered_sources(self : Config) -> Array[&Source] {
 
 ///|
 /// 给整棵树补上来源；表节点和数组节点也带上，叶子才有意义。
+///
+/// 已经有来源的节点保持不动：环境变量、命令行这类 Source 会按 key 自己标叶子，
+/// 这里只补它们没标到的节点。
 fn attach_origin(value : Value, origin : Origin?) -> Value {
   match origin {
     None => value
-    Some(_) =>
+    Some(_) => {
+      let node_origin = match value.origin {
+        Some(_) => value.origin
+        None => origin
+      }
       match value.kind {
         ValueKind::Table(table) => {
           let mapped : Map[String, Value] = Map([], capacity=table.capacity())
           for key, child in table {
             mapped[key] = attach_origin(child, origin)
           }
-          { kind: ValueKind::Table(mapped), origin, }
+          { kind: ValueKind::Table(mapped), origin: node_origin, }
         }
         ValueKind::Array(array) =>
           {
             kind: ValueKind::Array(
               array.map(fn(child) { attach_origin(child, origin) }),
             ),
-            origin,
+            origin: node_origin,
           }
-        kind => { kind, origin, }
+        kind => { kind, origin: node_origin, }
       }
+    }
   }
 }
 

@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/env_source"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct EnvSource {
+  prefix : String
+}
+pub fn EnvSource::all() -> Self
+pub fn EnvSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn EnvSource::new(String) -> Self
+pub fn EnvSource::origin(Self) -> @core.Origin?
+pub impl @core.Source for EnvSource
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/file_source"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct FileSource {
+  path : String
+  format : &@core.Format
+}
+pub fn FileSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn FileSource::new(String, &@core.Format) -> Self
+pub fn FileSource::origin(Self) -> @core.Origin?
+pub fn FileSource::read(Self) -> Bytes raise @core.ConfigError
+pub impl @core.Locator for FileSource
+pub impl @core.Source for FileSource
+
+// Type aliases
+
+// Traits

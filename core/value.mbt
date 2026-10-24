@@ -76,6 +76,15 @@ pub fn Value::table(tbl : Map[String, Value]) -> Value {
 }
 
 ///|
+/// 给一个值挂上来源。
+///
+/// `Config` 合并前会给来源产出的树补来源；需要按 key 报不同来源的 Source
+/// （环境变量、命令行）用这个函数自己标叶子。
+pub fn Value::with_origin(self : Value, origin : Origin) -> Value {
+  { kind: self.kind, origin: Some(origin), }
+}
+
+///|
 /// 只比 `kind`：来源不同不算值不同。
 pub impl Eq for Value with fn equal(self : Value, other : Value) -> Bool {
   self.kind == other.kind

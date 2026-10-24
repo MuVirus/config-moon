@@ -24,14 +24,15 @@ The following constraints apply to all code in this repository:
 
 - **Integer precision.** Integers are stored as `Int64`, never as floating point.
 - **The core is platform-independent.** It contains no platform-specific code
-  and must compile on every target; file and environment sources are separate
-  subpackages.
+  and must compile on every target; the file, environment and command-line
+  sources live in their own packages at the module root.
 - **Struct extraction.** Extraction uses MoonBit's native `derive(FromJson)`;
   MoonBit currently supports neither deriving third-party traits nor macros.
 - **Error messages.** Every message names the key, the expected type and the
   actual type.
-- **Package layout.** `core/` plus one package per format under `core/format/`;
-  always write import aliases explicitly (`@config`, `@jsonfmt`).
+- **Package layout.** `core/` plus one package per format under `core/format/`,
+  and `file_source/`, `env_source/`, `cli_source/` at the module root; always
+  write import aliases explicitly (`@config`, `@jsonfmt`).
 - **Package names.** Never name a package after a core package; format packages
   keep the `_format` suffix, source packages the `_source` suffix.
 - **Cross-package helpers.** Methods cannot cross packages (`4059`); use free
@@ -53,8 +54,9 @@ Documents live in `docs/`. Where each one goes and what belongs in it is in
   metadata.
 
 - The core package sits in `core/`; format packages sit in `core/format/`, one
-  directory per format. The documents live in `docs/`; see
-  [`docs/AGENTS.md`](docs/AGENTS.md).
+  directory per format; the file, environment and command-line sources sit in
+  `file_source/`, `env_source/` and `cli_source/` at the module root. The
+  documents live in `docs/`; see [`docs/AGENTS.md`](docs/AGENTS.md).
 
 - Tests follow `docs/conventions/testing.md`: examples for public API live in `///` doc
   comments as ` ```mbt check ` blocks, private logic goes into `_wbtest.mbt`,
