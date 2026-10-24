@@ -56,3 +56,14 @@
 | 实测 | 结果 | 影响 |
 |---|---|---|
 | registry 上的 CBOR 库 | `mizchi/cbor`（下载量最高）用的是旧的 `moon.mod.json`，当前工具链拒绝安装 | 只能从 `2515050242/cbor`（纯 MoonBit、零传递依赖、完整 RFC 8949）和 `f4ah6o/simple-webauthn/cbor`（同样零依赖，但是子集：不支持半精度/单精度浮点、不支持不定长容器、而且**静默忽略尾随字节**）里选 |
+
+## 6. 来源追踪与合并规则
+
+> **2026-10 实现时定的细节**
+>
+> - `Origin` 挂在 `Value` 的每个节点上，`Value` 的 `Eq` / `Debug` 都只看 `kind`。否则内容相同、来源不同的值不相等，合并测试会莫名其妙地失败。
+> - `StringSource` / `BytesSource` 归到 `SourceKind::Custom`，标签分别是 `string` / `bytes`。它们既不是文件，也不是环境变量；给 `ByKind` 一个明确的档位比硬塞进 `Memory` 更清楚。
+> - `ByKind(order)` 的数组按优先级从高到低写；没列出的 kind 排在最后。实现上按优先级**从低到高**处理来源，再用 `LastWins` 合并——同一档内后加的仍然赢。
+> - `Custom(fn)` 收到的是「已经合好的部分」和「下一层」，返回新的部分。来源已经挂在值上，自定义函数要自己负责保留。
+> - `Config::origin_of` / `origins` 保留 `raise ConfigError`：没 `build()` 时它们会现场合并，来源解析失败必须报出来，不能吞掉。路径不存在返回 `None`。
+> - 取值错误暂时还没带上来源（`TypeMismatch` 仍是三个字段），等错误类型扩展后再补；现在先用 `origin_of` 查。

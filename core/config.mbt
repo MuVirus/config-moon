@@ -1,5 +1,5 @@
 ///|
-/// 配置：一串来源 + 一棵合并结果。
+/// 配置：一串来源、一条合并规则、一棵合并结果。
 ///
 /// `build()` 之后来源就摊平成一棵树，取值全部走这棵树。
 ///
@@ -7,26 +7,37 @@
 /// 想读 JSON、读文件、读环境变量，是来源包的事。
 pub struct Config {
   sources : Array[&Source]
+  rule : MergeRule
   value : Value
 }
 
 ///|
-/// 创建一个新的配置
+/// 创建一个新的配置，默认后加者优先
 pub fn Config::new() -> Config {
-  { sources: [], value: Value::table(Map([], capacity=0)), }
+  {
+    sources: [],
+    rule: MergeRule::LastWins,
+    value: Value::table(Map([], capacity=0)),
+  }
 }
 
 ///|
-/// 添加一个来源，后加的优先级更高
+/// 添加一个来源
 pub fn Config::add(self : Config, source : &Source) -> Config {
   self.sources.push(source)
   self
 }
 
 ///|
-/// 合并所有来源（后加者优先）
+/// 换一条合并规则
+pub fn Config::with_rule(self : Config, rule : MergeRule) -> Config {
+  { sources: self.sources, rule, value: self.value, }
+}
+
+///|
+/// 按规则合并所有来源
 pub fn Config::build(self : Config) -> Config raise ConfigError {
-  { sources: [], value: self.merged(), }
+  { sources: [], rule: self.rule, value: self.merged(), }
 }
 
 ///|
@@ -35,11 +46,77 @@ fn Config::merged(self : Config) -> Value raise ConfigError {
   if self.sources.is_empty() {
     return self.value
   }
-  let mut acc = Value::table(Map([], capacity=8))
-  for source in self.sources {
-    acc = merge(acc, source.collect())
+  let ordered = self.ordered_sources()
+  let rule = self.rule
+  let mut acc : Value? = None
+  for source in ordered {
+    let layer = attach_origin(source.collect(), source.origin())
+    acc = Some(
+      match acc {
+        None => layer
+        Some(base) =>
+          match rule {
+            MergeRule::Custom(custom) => custom(base, layer)
+            _ => merge(base, layer)
+          }
+      },
+    )
   }
-  acc
+  acc.unwrap_or(Value::table(Map([], capacity=0)))
+}
+
+///|
+/// 按合并规则决定来源的处理顺序；后面处理的优先级更高。
+fn Config::ordered_sources(self : Config) -> Array[&Source] {
+  let rule = self.rule
+  match rule {
+    MergeRule::FirstWins => self.sources.rev()
+    MergeRule::ByKind(order) => {
+      let keyed : Array[(Int32, Int32, &Source)] = []
+      for i, source in self.sources {
+        let kind = match source.origin() {
+          Some(origin) => origin.kind
+          None => SourceKind::Custom
+        }
+        keyed.push((kind_rank(kind, order), i, source))
+      }
+      keyed.sort_by(fn(a, b) {
+        if a.0 != b.0 {
+          b.0.compare(a.0)
+        } else {
+          a.1.compare(b.1)
+        }
+      })
+      keyed.map(fn(entry) { entry.2 })
+    }
+    _ => self.sources
+  }
+}
+
+///|
+/// 给整棵树补上来源；表节点和数组节点也带上，叶子才有意义。
+fn attach_origin(value : Value, origin : Origin?) -> Value {
+  match origin {
+    None => value
+    Some(_) =>
+      match value.kind {
+        ValueKind::Table(table) => {
+          let mapped : Map[String, Value] = Map([], capacity=table.capacity())
+          for key, child in table {
+            mapped[key] = attach_origin(child, origin)
+          }
+          { kind: ValueKind::Table(mapped), origin, }
+        }
+        ValueKind::Array(array) =>
+          {
+            kind: ValueKind::Array(
+              array.map(fn(child) { attach_origin(child, origin) }),
+            ),
+            origin,
+          }
+        kind => { kind, origin, }
+      }
+  }
 }
 
 ///|
@@ -108,4 +185,48 @@ pub fn Config::get_value(
   path : String,
 ) -> Value raise ConfigError {
   self.merged().get_path(path)
+}
+
+///|
+/// 某个路径最终来自哪一层。路径不存在时给 `None`。
+pub fn Config::origin_of(
+  self : Config,
+  path : String,
+) -> Origin? raise ConfigError {
+  let value = self.get_value(path) catch {
+    ConfigError::MissingKey(_) | ConfigError::TypeMismatch(_, _, _) =>
+      return None
+    error => raise error
+  }
+  value.origin
+}
+
+///|
+/// 所有叶子路径和它们的来源，适合做 `--print-config` 这类诊断命令。
+pub fn Config::origins(
+  self : Config,
+) -> Array[(String, Origin)] raise ConfigError {
+  let result : Array[(String, Origin)] = []
+  collect_origins(self.merged(), "", result)
+  result
+}
+
+///|
+fn collect_origins(
+  value : Value,
+  prefix : String,
+  result : Array[(String, Origin)],
+) -> Unit {
+  match value.kind {
+    ValueKind::Table(table) =>
+      for key, child in table {
+        let path = if prefix == "" { key } else { "\{prefix}.\{key}" }
+        collect_origins(child, path, result)
+      }
+    _ =>
+      match value.origin {
+        Some(origin) => result.push((prefix, origin))
+        None => ()
+      }
+  }
 }

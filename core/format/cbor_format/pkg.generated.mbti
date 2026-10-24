@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/format/cbor_format"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CborFormat {
+}
+pub fn CborFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn CborFormat::new() -> Self
+pub impl @core.Format for CborFormat
+
+// Type aliases
+
+// Traits

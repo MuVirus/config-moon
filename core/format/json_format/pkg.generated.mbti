@@ -1,0 +1,51 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/format/json_format"
+
+import {
+  "MuVirus/moonfig/core",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn[T : @json.FromJson] extract(@core.Value) -> T raise @core.ConfigError
+
+pub fn[T : @json.FromJson] extract_from(@core.Config, String) -> T raise @core.ConfigError
+
+pub fn to_json(@core.Value) -> Json
+
+// Errors
+
+// Types and methods
+pub struct Int64Text {
+  value : Int64
+} derive(Eq)
+pub fn Int64Text::equal(Self, Self) -> Bool
+pub fn Int64Text::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Int64Text::new(Int64) -> Self
+pub fn Int64Text::not_equal(Self, Self) -> Bool
+pub fn Int64Text::to_int64(Self) -> Int64
+pub fn Int64Text::to_json(Self) -> Json
+pub impl ToJson for Int64Text
+pub impl @json.FromJson for Int64Text
+
+pub struct JsonFormat {
+}
+pub fn JsonFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn JsonFormat::new() -> Self
+pub impl @core.Format for JsonFormat
+
+pub struct UInt64Text {
+  value : UInt64
+} derive(Eq)
+pub fn UInt64Text::equal(Self, Self) -> Bool
+pub fn UInt64Text::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UInt64Text::new(UInt64) -> Self
+pub fn UInt64Text::not_equal(Self, Self) -> Bool
+pub fn UInt64Text::to_json(Self) -> Json
+pub fn UInt64Text::to_uint64(Self) -> UInt64
+pub impl ToJson for UInt64Text
+pub impl @json.FromJson for UInt64Text
+
+// Type aliases
+
+// Traits

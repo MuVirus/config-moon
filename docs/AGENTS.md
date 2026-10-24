@@ -11,7 +11,7 @@
   - [`sources.md`](design/sources.md) —— Source / Format 接口、core 边界、package 划分、来源追踪、第三方解析器的取舍
   - [`extract.md`](design/extract.md) —— 提取到结构体、整数映射、错误消息
 - `decisions/` —— 决策记录，讲「当时为什么这么定」
-  - [`decisions.md`](decisions/decisions.md) —— 包名、跨包方法、Bytes、JSON 数值、CBOR 选型
+  - [`decisions.md`](decisions/decisions.md) —— 包名、跨包方法、Bytes、JSON 数值、CBOR 选型、来源追踪与合并规则
 - `plan/` —— 计划文档，讲「接下来做什么」
   - [`roadmap.md`](plan/roadmap.md) —— 待实现的方向、进度
   - [`source-model.md`](plan/source-model.md) —— Source 模型收敛的改动清单与顺序

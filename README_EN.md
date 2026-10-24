@@ -24,6 +24,7 @@ A native configuration library for MoonBit.
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
+- **Traceable origins**: `origin_of` / `origins()` tell you which layer a value finally came from
 
 ---
 
@@ -34,29 +35,31 @@ Add the dependencies to your `moon.pkg`:
 ```moonbit
 import {
   "MuVirus/moonfig/core" @config,
-  "MuVirus/moonfig/core/source/json_source" @jsonsrc,
+  "MuVirus/moonfig/core/format/json_format" @jsonfmt,
 }
 ```
 
 > **Write the alias out.** MoonBit binds the directory name when the alias is left
 > off, so the core package would become `@core`. That compiles, but this project
-> spells the alias out everywhere (`@config` / `@jsonsrc`): short, and the user's
+> spells the alias out everywhere (`@config` / `@jsonfmt`): short, and the user's
 > import block survives a future directory reshuffle.
 
-The core package `core/` provides `MemorySource` (holds a hand-built `Value`
-tree). Every other format has a package of its own, named
-`core/source/<format>_source` — add the one you need to your `moon.pkg`. The
-mapping rules live in each package's doc comment.
+The core package `core/` provides `MemorySource`, `StringSource` and
+`BytesSource`: a hand-built `Value` tree, a piece of text, a piece of bytes. Every
+other format has a package of its own, named `core/format/<format>_format` and
+exposing only `XxxFormat`; add the one you need to your `moon.pkg` and combine it
+with `StringSource` / `BytesSource`. The mapping rules live in each package's doc
+comment.
 
 Stack two sources and the later one wins:
 
 ```moonbit nocheck
-using @config { type Config }
-using @jsonsrc { type JsonSource }
+using @config { type Config, type StringSource }
+using @jsonfmt { type JsonFormat }
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}"))
-  .add(JsonSource::from_str("{\"db\":{\"port\":6543}}"))
+  .add(StringSource::new("{\"db\":{\"host\":\"localhost\",\"port\":5432}}", JsonFormat::new()))
+  .add(StringSource::new("{\"db\":{\"port\":6543}}", JsonFormat::new()))
   .build()
 
 cfg.get_string("db.host")   // "localhost"   ← from the first source, not overridden
@@ -72,11 +75,11 @@ cfg.get_int("db.port")      // 6543          ← overridden by the second
 Reads match the value's actual type exactly; no implicit conversion is performed:
 
 ```moonbit nocheck
-using @config {type Config}
-using @jsonsrc {type JsonSource, extract_from}
+using @config {type Config, type StringSource}
+using @jsonfmt {type JsonFormat, extract_from}
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"port\":\"5432\"}}"))
+  .add(StringSource::new("{\"db\":{\"port\":\"5432\"}}", JsonFormat::new()))
   .build()
 
 cfg.get_string("db.port")   // "5432"
@@ -125,27 +128,52 @@ cfg.get_float("ratio")      // 0.5
 Sources need not share a format; a later one overrides only the keys it shares:
 
 ```moonbit nocheck
-using @config {type Config}
-using @jsonsrc {type JsonSource}
-using @inisrc {type IniSource}
-using @dotenvsrc {type DotenvSource}
+using @config {type Config, type StringSource}
+using @jsonfmt {type JsonFormat}
+using @inifmt {type IniFormat}
+using @dotenvfmt {type DotenvFormat}
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}")) // defaults
-  .add(IniSource::from_str("[db]\nport = 6000\n"))                              // config file
-  .add(DotenvSource::from_str("db.port=6543"))                                  // environment override
+  .add(StringSource::new("{\"db\":{\"host\":\"localhost\",\"port\":5432}}", JsonFormat::new())) // defaults
+  .add(StringSource::new("[db]\nport = 6000\n", IniFormat::new()))                              // config file
+  .add(StringSource::new("db.port=6543", DotenvFormat::new()))                                  // environment override
   .build()
 
 cfg.get_string("db.host")   // "localhost"   only the first source provides it
 cfg.get_int("db.port")      // 6543          the last one wins
 ```
 
+The default rule is `LastWins`. Use `.with_rule(MergeRule::FirstWins)` to flip the order, `MergeRule::ByKind([...])` to rank by source kind, or pass a custom function.
+
+### Source tracking
+
+Every value remembers the layer it came from, so you can ask after reading:
+
+```moonbit nocheck
+using @config {type Config, type MemorySource, type Value}
+
+let cfg = Config::new()
+  .add(
+    MemorySource::new(
+      Value::table({ "db": Value::table({ "port": Value::int(5432L) }) }),
+    ),
+  )
+  .build()
+
+let origin = cfg.origin_of("db.port").unwrap()
+origin.kind    // SourceKind::Memory
+origin.label   // "memory"
+cfg.origins()  // [("db.port", Origin { ... })], leaves only
+```
+
+`origin.kind` is there for pattern matching; `label` is display-only and never parsed back. The queries merge on demand when `build()` has not run, so they can raise.
+
 ### Extract into a struct
 
 Using the compiler's own `derive(FromJson)`:
 
 ```moonbit nocheck
-using @jsonsrc {extract_from}
+using @jsonfmt {extract_from}
 
 struct DbCfg {
   host : String
@@ -158,7 +186,7 @@ let db : DbCfg = extract_from(cfg, "db")
 Struct fields should not use `Int64` / `UInt64`: core's `FromJson` only accepts JSON strings, which is incompatible with this library's integer mapping. Use `Int64Text` / `UInt64Text` instead and read them with `to_int64()` / `to_uint64()`.
 
 ```moonbit nocheck
-using @jsonsrc {extract_from, Int64Text}
+using @jsonfmt {extract_from, Int64Text}
 
 struct OrderCfg {
   id : Int64Text
@@ -196,6 +224,7 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 | 🚧 | **Core** | One value type for configuration, merge by key, read by key, read by struct, error handling |
 | 🚧 | **Many formats** | letting other formats plug in |
 | ⬜ | **External sources** | Configuration files, environment variables, any combination of sources |
+| 🚧 | **Source tracking** | Which layer a key finally came from |
 | ⬜ | **Validation** | Required keys, value ranges, custom rules |
 | ⬜ | **Format detection** | By suffix, by content, an error when neither decides |
 | ⬜ | **Hot reload** | Watch the file, re-read and merge, notify listeners, keep the old config when a new one is bad |

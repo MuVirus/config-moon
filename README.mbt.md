@@ -24,6 +24,7 @@ MoonBit 原生配置库
 - **多格式支持**：JSON、INI、dotenv、YAML、TOML、XML、CBOR 字节或自建的 `Value` 树都能作为来源，换格式不用改上层声明
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
+- **来源可追**：`origin_of` / `origins()` 回答每个值最终来自哪一层
 
 ---
 
@@ -34,26 +35,27 @@ MoonBit 原生配置库
 ```moonbit
 import {
   "MuVirus/moonfig/core" @config,
-  "MuVirus/moonfig/core/source/json_source" @jsonsrc,
+  "MuVirus/moonfig/core/format/json_format" @jsonfmt,
 }
 ```
 
 > **别名显式写出来。** 省略别名时 MoonBit 按目录名绑定，核心会变成 `@core`，实测能编译；
-> 本项目统一写 `@config` / `@jsonsrc`，短，且目录再调整时用户的写法不用跟着改。
+> 本项目统一写 `@config` / `@jsonfmt`，短，且目录再调整时用户的写法不用跟着改。
 
-核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树）。其余格式各占一个包，
-名字是 `core/source/<格式>_source`，要加哪个格式就把哪个包写进 `moon.pkg`。
+核心包 `core/` 提供 `MemorySource`、`StringSource`、`BytesSource`：内存里的 `Value` 树、
+一段文本、一段字节。其余格式各占一个包，名字是 `core/format/<格式>_format`，
+只提供 `XxxFormat`；把需要的包写进 `moon.pkg`，再和 `StringSource` / `BytesSource` 组合。
 映射规则在每个包的文档注释里。
 
 叠加两个来源，后加入的覆盖先加入的：
 
 ```moonbit nocheck
-using @config { type Config }
-using @jsonsrc { type JsonSource }
+using @config { type Config, type StringSource }
+using @jsonfmt { type JsonFormat }
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}"))
-  .add(JsonSource::from_str("{\"db\":{\"port\":6543}}"))
+  .add(StringSource::new("{\"db\":{\"host\":\"localhost\",\"port\":5432}}", JsonFormat::new()))
+  .add(StringSource::new("{\"db\":{\"port\":6543}}", JsonFormat::new()))
   .build()
 
 cfg.get_string("db.host")   // "localhost"   ← 第一个来源提供，未被覆盖
@@ -69,11 +71,11 @@ cfg.get_int("db.port")      // 6543          ← 第二个来源覆盖
 取值按实际类型严格匹配，不做隐式转换：
 
 ```moonbit nocheck
-using @config {type Config}
-using @jsonsrc {type JsonSource, extract_from}
+using @config {type Config, type StringSource}
+using @jsonfmt {type JsonFormat, extract_from}
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"port\":\"5432\"}}"))
+  .add(StringSource::new("{\"db\":{\"port\":\"5432\"}}", JsonFormat::new()))
   .build()
 
 cfg.get_string("db.port")   // "5432"
@@ -121,27 +123,52 @@ cfg.get_float("ratio")      // 0.5
 来源之间不必同一种格式，后加入的只覆盖同名键：
 
 ```moonbit nocheck
-using @config {type Config}
-using @jsonsrc {type JsonSource}
-using @inisrc {type IniSource}
-using @dotenvsrc {type DotenvSource}
+using @config {type Config, type StringSource}
+using @jsonfmt {type JsonFormat}
+using @inifmt {type IniFormat}
+using @dotenvfmt {type DotenvFormat}
 
 let cfg = Config::new()
-  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}")) // 默认值
-  .add(IniSource::from_str("[db]\nport = 6000\n"))                              // 配置文件
-  .add(DotenvSource::from_str("db.port=6543"))                                  // 环境覆盖
+  .add(StringSource::new("{\"db\":{\"host\":\"localhost\",\"port\":5432}}", JsonFormat::new())) // 默认值
+  .add(StringSource::new("[db]\nport = 6000\n", IniFormat::new()))                              // 配置文件
+  .add(StringSource::new("db.port=6543", DotenvFormat::new()))                                  // 环境覆盖
   .build()
 
 cfg.get_string("db.host")   // "localhost"   只有第一个来源提供
 cfg.get_int("db.port")      // 6543          最后加入的赢
 ```
 
+默认规则是 `LastWins`；要换顺序用 `.with_rule(MergeRule::FirstWins)`，按来源类型排用 `MergeRule::ByKind([...])`，也可以传自定义函数。
+
+### 来源追踪
+
+每个值都记着来自哪一层，取值之后可以直接问：
+
+```moonbit nocheck
+using @config {type Config, type MemorySource, type Value}
+
+let cfg = Config::new()
+  .add(
+    MemorySource::new(
+      Value::table({ "db": Value::table({ "port": Value::int(5432L) }) }),
+    ),
+  )
+  .build()
+
+let origin = cfg.origin_of("db.port").unwrap()
+origin.kind    // SourceKind::Memory
+origin.label   // "memory"
+cfg.origins()  // [("db.port", Origin { ... })]，只列叶子路径
+```
+
+`origin.kind` 可以直接模式匹配，`label` 只用于展示，不反解析。查询在没 `build()` 时会现场合并，所以带 `raise`。
+
 ### 提取到结构体
 
 使用编译器自带的 `derive(FromJson)`：
 
 ```moonbit nocheck
-using @jsonsrc {extract_from}
+using @jsonfmt {extract_from}
 
 struct DbCfg {
   host : String
@@ -154,7 +181,7 @@ let db : DbCfg = extract_from(cfg, "db")
 结构体字段不建议使用 `Int64` / `UInt64`：core 的 `FromJson` 只接受 JSON 字符串，与本库的整数映射不兼容。替代方案是 `Int64Text` / `UInt64Text`，通过 `to_int64()` / `to_uint64()` 取值。
 
 ```moonbit nocheck
-using @jsonsrc {extract_from, Int64Text}
+using @jsonfmt {extract_from, Int64Text}
 
 struct OrderCfg {
   id : Int64Text
@@ -191,7 +218,7 @@ try {
 | 🚧 | **核心** | 统一的配置值类型、按键合并、按键取值、按结构体取值、错误处理 |
 | 🚧 | **多格式** | JSON、INI、dotenv、YAML、TOML、XML、CBOR 七种格式 |
 | ⬜ | **外部来源** | 配置文件、环境变量、命令行、多个来源任意组合 |
-| ⬜ | **来源追踪** | 某个键最终来自哪一层 |
+| 🚧 | **来源追踪** | 某个键最终来自哪一层 |
 | ⬜ | **校验** | 必填项、取值范围、自定义规则 |
 | ⬜ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
 | ⬜ | **热更新** | 监听文件变化、重新读取并合并、回调通知、失败时保留旧配置 |

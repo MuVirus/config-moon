@@ -30,10 +30,10 @@ The following constraints apply to all code in this repository:
   MoonBit currently supports neither deriving third-party traits nor macros.
 - **Error messages.** Every message names the key, the expected type and the
   actual type.
-- **Package layout.** `core/` plus one package per format under `core/source/`;
-  always write import aliases explicitly (`@config`, `@jsonsrc`).
+- **Package layout.** `core/` plus one package per format under `core/format/`;
+  always write import aliases explicitly (`@config`, `@jsonfmt`).
 - **Package names.** Never name a package after a core package; format packages
-  keep the `_source` suffix.
+  keep the `_format` suffix, source packages the `_source` suffix.
 - **Cross-package helpers.** Methods cannot cross packages (`4059`); use free
   functions such as `to_json(v)`.
 
@@ -52,7 +52,7 @@ Documents live in `docs/`. Where each one goes and what belongs in it is in
 - In the toplevel directory, there is a `moon.mod` file listing module
   metadata.
 
-- The core package sits in `core/`; its sources sit in `core/source/`, one
+- The core package sits in `core/`; format packages sit in `core/format/`, one
   directory per format. The documents live in `docs/`; see
   [`docs/AGENTS.md`](docs/AGENTS.md).
 

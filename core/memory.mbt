@@ -29,4 +29,9 @@ pub impl Source for MemorySource with fn collect(self : MemorySource) -> Value {
 }
 
 ///|
-pub extend MemorySource with Source::{collect}
+pub impl Source for MemorySource with fn origin(_ : MemorySource) -> Origin? {
+  Some(Origin::new(SourceKind::Memory, "memory"))
+}
+
+///|
+pub extend MemorySource with Source::{collect, origin}

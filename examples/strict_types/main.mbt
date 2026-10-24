@@ -80,7 +80,7 @@ fn main raise {
     .add(
       StringSource::new(
         "{\"db\":{\"port\":5432,\"name\":\"main\"}}",
-        JsonFormat,
+        JsonFormat::new(),
       ),
     )
     .build()
@@ -88,7 +88,7 @@ fn main raise {
     .add(
       StringSource::new(
         "{\"db\":{\"port\":\"5432\",\"name\":\"main\"}}",
-        JsonFormat,
+        JsonFormat::new(),
       ),
     )
     .build()

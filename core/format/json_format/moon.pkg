@@ -1,0 +1,10 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/double",
+} for "wbtest"

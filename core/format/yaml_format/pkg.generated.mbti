@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/format/yaml_format"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct YamlFormat {
+}
+pub fn YamlFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn YamlFormat::new() -> Self
+pub impl @core.Format for YamlFormat
+
+// Type aliases
+
+// Traits

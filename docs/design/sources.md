@@ -10,6 +10,7 @@
 ```moonbit
 pub(open) trait Source {
   fn collect(Self) -> Value raise ConfigError
+  fn origin(Self) -> Origin? = _   // 默认 None
 }
 ```
 
@@ -73,7 +74,7 @@ pub(open) trait Locator {
 ```moonbit
 pub(open) trait Source {
   fn collect(Self) -> Value raise ConfigError
-  fn origin(Self) -> Origin? { None }
+  fn origin(Self) -> Origin? = _   // blanket impl 给 None
 }
 ```
 
@@ -85,8 +86,11 @@ pub(open) trait Source {
 
 `label` 只给人看，不解析、不反推。反推走 `locator`：
 
-- `Config::origin_of(path) -> Origin?`
-- `Config::origins() -> Array[(String, Origin)]`，路径在遍历时算出来，不存进节点
+- `Config::origin_of(path) -> Origin? raise ConfigError`
+- `Config::origins() -> Array[(String, Origin)] raise ConfigError`，路径在遍历时算出来，不存进节点
+
+两个查询在没 `build()` 时会现场合并，所以保留 `raise`；路径不存在时 `origin_of` 给 `None`。
+`StringSource` / `BytesSource` 报 `SourceKind::Custom`，标签是 `string` / `bytes`。
 
 `FileSource` 用平台自己的路径或 URL 实现 `Locator`，core 只看到 `read()`。web 上的文件也能反推，core 不需要知道文件系统。
 

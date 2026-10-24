@@ -1,13 +1,13 @@
 ///|
 /// 合并两条规则：两边都是表就逐 key 合，其它情况后加的赢。
 ///
-/// - 都是 `Table` → 递归逐 key 合并
+/// - 都是 `Table` → 递归逐 key 合并，表节点取 `over` 的 origin
 /// - 其它 → `over` 覆盖 `base`
 /// - 数组**整体替换**，不拼接
 fn merge(base : Value, over : Value) -> Value {
   match (base.kind, over.kind) {
     (ValueKind::Table(a), ValueKind::Table(b)) =>
-      Value::table(merge_table(a, b))
+      { kind: ValueKind::Table(merge_table(a, b)), origin: over.origin, }
     _ => over
   }
 }

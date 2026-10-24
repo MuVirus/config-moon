@@ -4,9 +4,14 @@
 
 ///|
 using @config {
+  type BytesSource,
   type Config,
   type ConfigError,
   type MemorySource,
+  type MergeRule,
+  type Origin,
+  type SourceKind,
+  type StringSource,
   type Value,
   type ValueKind,
 }
@@ -130,6 +135,32 @@ test "get_bytes returns the raw bytes" {
 }
 
 ///|
+/// 测试用的格式：把字节原样当字符串，不做解析
+struct EchoFormat {}
+
+///|
+impl @config.Format for EchoFormat with fn decode(_ : EchoFormat, bytes : Bytes) -> Value raise ConfigError {
+  let text = @utf8.decode(bytes) catch {
+    _ => raise ConfigError::ParseError("不是合法的 UTF-8")
+  }
+  Value::str(text)
+}
+
+///|
+/// 文本先编码成字节，再交给格式
+test "StringSource encodes text before decoding" {
+  let source = StringSource::new("hello", EchoFormat::{ })
+  assert_eq(@config.Source::collect(source), Value::str("hello"))
+}
+
+///|
+/// 字节原样交给格式
+test "BytesSource passes bytes through" {
+  let source = BytesSource::new(b"hi", EchoFormat::{ })
+  assert_eq(@config.Source::collect(source), Value::str("hi"))
+}
+
+///|
 /// 跑一段注定报错的代码，把 `TypeMismatch` 拼成一句话
 fn type_error_of(expected : String, f : () -> Unit raise ConfigError) -> String {
   try {
@@ -144,4 +175,150 @@ fn type_error_of(expected : String, f : () -> Unit raise ConfigError) -> String 
       }
     e => e.to_string()
   }
+}
+
+///|
+/// 测试用的来源：值、来源都自己给
+struct KindedSource {
+  value : Value
+  origin : Origin
+}
+
+///|
+pub impl @config.Source for KindedSource with fn collect(self : KindedSource) -> Value {
+  self.value
+}
+
+///|
+pub impl @config.Source for KindedSource with fn origin(self : KindedSource) -> Origin? {
+  Some(self.origin)
+}
+
+///|
+fn kinded(value : Value, kind : SourceKind, label : String) -> KindedSource {
+  KindedSource::{ value, origin: Origin::new(kind, label), }
+}
+
+///|
+/// 来源跟着赢家走：后加的来源覆盖了 db.port，来源就是后加的那层
+test "origin_of follows the winning layer" {
+  let cfg = Config::new()
+    .add(
+      MemorySource::new(
+        Value::table({
+          "db": Value::table({
+            "host": Value::str("localhost"),
+            "port": Value::int(5432L),
+          }),
+        }),
+      ),
+    )
+    .add(
+      MemorySource::new(
+        Value::table({ "db": Value::table({ "port": Value::int(6543L) }) }),
+      ),
+    )
+    .build()
+  let origin = cfg.origin_of("db.port").unwrap()
+  assert_eq(origin.kind, SourceKind::Memory)
+  assert_eq(origin.label, "memory")
+  assert_true(cfg.origin_of("db.user") is None)
+}
+
+///|
+/// origins() 列出叶子路径，表节点不算叶子
+test "origins lists every leaf" {
+  let cfg = Config::new()
+    .add(
+      kinded(
+        Value::table({
+          "db": Value::table({ "host": Value::str("localhost") }),
+          "debug": Value::bool(false),
+        }),
+        SourceKind::File,
+        "file:config/app.json",
+      ),
+    )
+    .build()
+  let origins = cfg.origins()
+  assert_eq(origins.length(), 2)
+  let labels = origins.map(fn(pair) { "\{pair.0}=\{pair.1.label}" })
+  assert_true(labels.contains("db.host=file:config/app.json"))
+  assert_true(labels.contains("debug=file:config/app.json"))
+}
+
+///|
+/// 来源不同不算值不同
+test "value equality ignores origin" {
+  let from_memory = Config::new()
+    .add(MemorySource::new(Value::table({ "k": Value::str("x") })))
+    .build()
+    .get_value("k")
+  let from_file = Config::new()
+    .add(
+      kinded(
+        Value::table({ "k": Value::str("x") }),
+        SourceKind::File,
+        "file:config.json",
+      ),
+    )
+    .build()
+    .get_value("k")
+  assert_eq(from_memory, from_file)
+}
+
+///|
+/// FirstWins：先加的赢，后加只补空缺
+test "FirstWins keeps the earlier value" {
+  let cfg = Config::new()
+    .add(MemorySource::new(Value::table({ "a": Value::int(1L) })))
+    .add(MemorySource::new(Value::table({ "a": Value::int(2L) })))
+    .with_rule(MergeRule::FirstWins)
+    .build()
+  assert_eq(cfg.get_int("a"), 1L)
+}
+
+///|
+/// ByKind：数组里越靠前越优先，同一档内后加的赢
+test "ByKind ranks sources by kind" {
+  let env = kinded(
+    Value::table({ "a": Value::int(3L) }),
+    SourceKind::Env,
+    "env:A",
+  )
+  let file = kinded(
+    Value::table({ "a": Value::int(2L) }),
+    SourceKind::File,
+    "file:a",
+  )
+  let memory = kinded(
+    Value::table({ "a": Value::int(1L) }),
+    SourceKind::Memory,
+    "memory",
+  )
+  let env_wins = Config::new()
+    .add(memory)
+    .add(file)
+    .add(env)
+    .with_rule(MergeRule::ByKind([SourceKind::Env, SourceKind::File]))
+    .build()
+  assert_eq(env_wins.get_int("a"), 3L)
+  let memory_wins = Config::new()
+    .add(memory)
+    .add(file)
+    .add(env)
+    .with_rule(MergeRule::ByKind([SourceKind::Memory]))
+    .build()
+  assert_eq(memory_wins.get_int("a"), 1L)
+}
+
+///|
+/// Custom：函数拿到的前一个是已经合好的部分
+test "Custom rule decides the merge" {
+  let cfg = Config::new()
+    .add(MemorySource::new(Value::table({ "a": Value::int(1L) })))
+    .add(MemorySource::new(Value::table({ "a": Value::int(2L) })))
+    .with_rule(MergeRule::Custom(fn(base, _over) { base }))
+    .build()
+  assert_eq(cfg.get_int("a"), 1L)
 }

@@ -18,9 +18,10 @@
 - [x] `Config` 构建器与 `get_string` / `get_int` / `get_bool` / `get_float`
 - [x] 错误处理：`MissingKey` / `TypeMismatch` / `ParseError`
 - [x] 按结构体取值（`derive(FromJson)`）
-- [ ] Source 追踪：某个键最终来自哪一层，见 [sources.md](../design/sources.md#来源追踪)
+- [x] Source 追踪：`origin_of` / `origins` 查某个键最终来自哪一层，见 [sources.md](../design/sources.md#来源追踪)
+- [ ] 取值错误带上来源（`TypeMismatch` 现在还是三个字段）
 
-**为什么还是进行中**：Source 追踪要么现在就把 Source 带进 `Value`，越晚定代价越大——事后补要改 `Value` 的定义（每个值多带一个 Source），而 `Value` 是所有东西的地基。
+**为什么还是进行中**：追踪已经落到 `Value` 和 `Config` 上，剩下的是把来源写进取值错误的消息里；这会改 `ConfigError` 的形状，等错误类型一起收口。
 
 ### 最初的推进顺序
 
@@ -29,7 +30,7 @@
 | 1 | `value.mbt` + `error.mbt` | 构造几个 `Value`，`debug_inspect` 形状对 |
 | 2 | `merge.mbt` | 嵌套 `Table` 验证「后覆盖前、表逐 key 合、数组整体换」 |
 | 3 | `source.mbt` + `config.mbt` | 两个 `MemorySource` 合起来，`get_*` 取到值；缺 key 报 `MissingKey` |
-| 4 | `core/source/json_source/` | `Json` 文本 → `Value`，`Int` / `Float` 按有无小数点分开 |
+| 4 | `core/format/json_format/` | `Json` 文本 → `Value`，`Int` / `Float` 按有无小数点分开 |
 | 5 | `extract` | 大整数端到端不丢 |
 
 第 1~3 步做完，库就能用了（只是目前只有 `MemorySource`）。第 4、5 步各是独立的增量。
@@ -40,13 +41,13 @@
 
 **方向**：把各种格式的配置读成同一份 `Value`。格式之间可以自由替换，声明不用改。
 
-- [x] JSON 文本（`core/source/json_source/` 包）
-- [x] TOML（`core/source/toml_source/` 包，依赖 `moonbit-community/toml`）
-- [x] YAML（`core/source/yaml_source/` 包，依赖 `moonbit-community/yaml`）
-- [x] `.env` 文本（`core/source/dotenv_source/` 包）
-- [x] INI（`core/source/ini_source/` 包）
-- [x] XML（`core/source/xml_source/` 包，依赖 `Milky2018/xml`）
-- [x] CBOR（`core/source/cbor_source/` 包，依赖 `2515050242/cbor`）
+- [x] JSON 文本（`core/format/json_format/` 包）
+- [x] TOML（`core/format/toml_format/` 包，依赖 `moonbit-community/toml`）
+- [x] YAML（`core/format/yaml_format/` 包，依赖 `moonbit-community/yaml`）
+- [x] `.env` 文本（`core/format/dotenv_format/` 包）
+- [x] INI（`core/format/ini_format/` 包）
+- [x] XML（`core/format/xml_format/` 包，依赖 `Milky2018/xml`）
+- [x] CBOR（`core/format/cbor_format/` 包，依赖 `2515050242/cbor`）
 
 每加一种格式只做一件事：格式 → `Value`。合并、取值、校验都复用 `core/`，不为格式写第二套逻辑。
 
@@ -54,7 +55,7 @@
 
 **CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子——而这个检验的结果是：`Value` 原来少了一个形状。CBOR 有字节串，`Value` 原来没地方放它，所以 `ValueKind` 现在多了一个 `Bytes` 分支，`get_bytes` 把它原样取出来。其余的部分一一对得上：整数、字符串、数组、映射都不用特例。
 
-**代价**：YAML、TOML、XML 和 CBOR 都依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`、`2515050242/cbor`），所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，`core/` 和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
+**代价**：YAML、TOML、XML 和 CBOR 都依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`、`2515050242/cbor`），所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，`core/` 和已完成的 `json_format`、`ini_format`、`dotenv_format` 不受影响。
 
 **JSON、INI 和 `.env` 都是自己写的解析器，没有第三方依赖。** 三者都只用 MoonBit 标准库的包：JSON 走 `@json`，INI 和 `.env` 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释；`.env` 的规则也写在包文档里：`export` 前缀可选、键名里的 `.` 变层级、单引号原样保留、双引号认转义、`#` 前面有空白才算行尾注释、不做变量展开。
 

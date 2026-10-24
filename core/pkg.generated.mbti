@@ -22,8 +22,18 @@ pub fn ConfigError::to_string(Self) -> String
 pub impl Show for ConfigError
 
 // Types and methods
+pub struct BytesSource {
+  bytes : Bytes
+  format : &Format
+}
+pub fn BytesSource::collect(Self) -> Value raise ConfigError
+pub fn BytesSource::new(Bytes, &Format) -> Self
+pub fn BytesSource::origin(Self) -> Origin?
+pub impl Source for BytesSource
+
 pub struct Config {
   sources : Array[&Source]
+  rule : MergeRule
   value : Value
 }
 pub fn Config::add(Self, &Source) -> Self
@@ -35,17 +45,56 @@ pub fn Config::get_int(Self, String) -> Int64 raise ConfigError
 pub fn Config::get_string(Self, String) -> String raise ConfigError
 pub fn Config::get_value(Self, String) -> Value raise ConfigError
 pub fn Config::new() -> Self
+pub fn Config::origin_of(Self, String) -> Origin? raise ConfigError
+pub fn Config::origins(Self) -> Array[(String, Origin)] raise ConfigError
+pub fn Config::with_rule(Self, MergeRule) -> Self
 
 pub struct MemorySource {
   table : Value
 }
 pub fn MemorySource::collect(Self) -> Value raise ConfigError
 pub fn MemorySource::new(Value) -> Self
+pub fn MemorySource::origin(Self) -> Origin?
 pub impl Source for MemorySource
+
+pub(all) enum MergeRule {
+  LastWins
+  FirstWins
+  ByKind(Array[SourceKind])
+  Custom((Value, Value) -> Value)
+}
+
+pub(all) struct Origin {
+  kind : SourceKind
+  label : String
+  locator : &Locator?
+}
+pub fn Origin::new(SourceKind, String) -> Self
+
+pub(all) enum SourceKind {
+  Memory
+  File
+  Env
+  Cli
+  Custom
+} derive(Eq, @debug.Debug)
+pub fn SourceKind::equal(Self, Self) -> Bool
+pub fn SourceKind::not_equal(Self, Self) -> Bool
+pub fn SourceKind::to_repr(Self) -> @debug.Repr
+
+pub struct StringSource {
+  text : String
+  format : &Format
+}
+pub fn StringSource::collect(Self) -> Value raise ConfigError
+pub fn StringSource::new(String, &Format) -> Self
+pub fn StringSource::origin(Self) -> Origin?
+pub impl Source for StringSource
 
 pub struct Value {
   kind : ValueKind
-} derive(Eq, @debug.Debug)
+  // private fields
+}
 pub fn Value::array(Array[Self]) -> Self
 pub fn Value::bool(Bool) -> Self
 pub fn Value::bytes(Bytes) -> Self
@@ -58,6 +107,8 @@ pub fn Value::null() -> Self
 pub fn Value::str(String) -> Self
 pub fn Value::table(Map[String, Self]) -> Self
 pub fn Value::to_repr(Self) -> @debug.Repr
+pub impl Eq for Value
+pub impl @debug.Debug for Value
 
 pub(all) enum ValueKind {
   Null
@@ -77,6 +128,15 @@ pub fn ValueKind::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
+pub(open) trait Format {
+  fn decode(Self, Bytes) -> Value raise ConfigError
+}
+
+pub(open) trait Locator {
+  fn read(Self) -> Bytes raise ConfigError
+}
+
 pub(open) trait Source {
   fn collect(Self) -> Value raise ConfigError
+  fn origin(Self) -> Origin? = _
 }

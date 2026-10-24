@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/format/dotenv_format"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct DotenvFormat {
+}
+pub fn DotenvFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn DotenvFormat::new() -> Self
+pub impl @core.Format for DotenvFormat
+
+// Type aliases
+
+// Traits

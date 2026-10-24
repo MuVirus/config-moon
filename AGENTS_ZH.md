@@ -26,9 +26,9 @@ XML、CBOR 以及内存中的表），把每个来源归一成同一种中间表
 - **结构体提取。** 提取使用 MoonBit 原生的 `derive(FromJson)`；MoonBit 暂不支持派生第三方 trait，
   也不支持宏定义。
 - **错误消息。** 每条消息写出键名、期望类型和实际类型。
-- **包布局。** `core/` 加上 `core/source/` 下一种格式一个包；import 别名一律显式写出
-  （`@config`、`@jsonsrc`）。
-- **包名。** 包名不得与 core 中的包重名；格式包保留 `_source` 后缀。
+- **包布局。** `core/` 加上 `core/format/` 下一种格式一个包；import 别名一律显式写出
+  （`@config`、`@jsonfmt`）。
+- **包名。** 包名不得与 core 中的包重名；格式包保留 `_format` 后缀，来源包保留 `_source` 后缀。
 - **跨包辅助函数。** 方法不能跨包（`4059`）；改用自由函数，如 `to_json(v)`。
 
 ### 文档
@@ -42,7 +42,7 @@ XML、CBOR 以及内存中的表），把每个来源归一成同一种中间表
 
 - 顶层目录有一个 `moon.mod`，记录模块元信息。
 
-- 核心包在 `core/`，来源包在 `core/source/`（一种格式一个目录）。文档放在 `docs/`，
+- 核心包在 `core/`，格式包在 `core/format/`（一种格式一个目录）。文档放在 `docs/`，
   见 [`docs/AGENTS.md`](docs/AGENTS.md)。
 
 - 测试遵循 `docs/conventions/testing.md`：公开 API 的示例写在 `///` 文档注释的 ` ```mbt check ` 代码块里，

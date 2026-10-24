@@ -1,0 +1,15 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/core/encoding/utf8",
+  "moonbit-community/toml",
+}
+
+import {
+  "MuVirus/moonfig/core" @config,
+} for "test"
+
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbit-community/toml",
+  "moonbitlang/core/double",
+} for "wbtest"

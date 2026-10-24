@@ -20,6 +20,7 @@ pub enum ValueKind {
 ///| 配置值
 pub struct Value {
   kind : ValueKind
+  priv origin : Origin?    // 来自哪一层；构造时一律 None，合并前补上
 }
 ```
 
@@ -39,12 +40,12 @@ fn merge(base : Value, over : Value) -> Value
 
 `Config` 持有 `sources`、`rule`、`value` 三个字段：`add` 只 append，`build` 按 `rule` 把 Source 逐个 merge 成一棵树，之后的 `get_*` 都从这棵树按路径取值。它不认识具体格式，只认识 `Source`。
 
-`MergeRule` 默认 `LastWins`（后加覆盖先加），另有 `FirstWins`、`ByKind(Array[SourceKind])` 和 `Custom(fn)`。规则是整份 `Config` 的，不做单层特殊；要单层特殊就给 `Source` 包一层。
+`MergeRule` 默认 `LastWins`（后加覆盖先加），另有 `FirstWins`、`ByKind(Array[SourceKind])` 和 `Custom(fn)`。规则是整份 `Config` 的，不做单层特殊；要单层特殊就给 `Source` 包一层。`ByKind` 的数组按优先级从高到低写，没列出的 kind 排在最后，同一档内后加的赢；`Custom(fn)` 收到「已经合好的部分」和「下一层」，返回新的部分。
 
 ```moonbit
 let cfg = Config::new()
   .add(MemorySource::new(table))
-  .add(StringSource::new(text, JsonFormat))
+  .add(StringSource::new(text, JsonFormat::new()))
   .build()                       // 依次合并，后加者优先
 
 cfg.get_string("db.host")        // String

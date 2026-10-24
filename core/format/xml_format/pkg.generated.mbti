@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/core/format/xml_format"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct XmlFormat {
+}
+pub fn XmlFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn XmlFormat::new() -> Self
+pub impl @core.Format for XmlFormat
+
+// Type aliases
+
+// Traits
