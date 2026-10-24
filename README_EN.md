@@ -156,8 +156,7 @@ struct DbCfg {
 let db : DbCfg = extract_from(cfg, "db")
 ```
 
-For 64-bit fields use `Int64Text`: core's `FromJson for Int64` only accepts a JSON
-string, which does not match this library's integer mapping.
+Struct fields should not use `Int64` / `UInt64`: core's `FromJson` only accepts JSON strings, which is incompatible with this library's integer mapping. Use `Int64Text` / `UInt64Text` instead and read them with `to_int64()` / `to_uint64()`.
 
 ```moonbit nocheck
 using @jsonsrc {extract_from, Int64Text}

@@ -151,7 +151,7 @@ struct DbCfg {
 let db : DbCfg = extract_from(cfg, "db")
 ```
 
-64 位字段写 `Int64Text`：core 的 `FromJson for Int64` 只接受 JSON 字符串，和本库的整数映射对不上。
+结构体字段不建议使用 `Int64` / `UInt64`：core 的 `FromJson` 只接受 JSON 字符串，与本库的整数映射不兼容。替代方案是 `Int64Text` / `UInt64Text`，通过 `to_int64()` / `to_uint64()` 取值。
 
 ```moonbit nocheck
 using @jsonsrc {extract_from, Int64Text}
