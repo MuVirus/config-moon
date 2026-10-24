@@ -2,7 +2,7 @@
 
 记录「按什么顺序做、每部分做完能验收什么」，不是契约，可以随时改。
 
-设计细节见 [docs/design.md](design.md)。
+设计文档见 [docs/design/design.md](../design/design.md)。
 
 状态分三档：✅ 已完成（进入维护）、🚧 进行中、⬜ 未进行。
 
@@ -18,9 +18,21 @@
 - [x] `Config` 构建器与 `get_string` / `get_int` / `get_bool` / `get_float`
 - [x] 错误处理：`MissingKey` / `TypeMismatch` / `ParseError`
 - [x] 按结构体取值（`derive(FromJson)`）
-- [ ] 来源追踪：某个键最终来自哪一层
+- [ ] Source 追踪：某个键最终来自哪一层
 
-**为什么还是进行中**：来源追踪要么现在就把来源带进 `Value`，越晚定代价越大——事后补要改 `Value` 的定义（每个值多带一个来源），而 `Value` 是所有东西的地基。
+**为什么还是进行中**：Source 追踪要么现在就把 Source 带进 `Value`，越晚定代价越大——事后补要改 `Value` 的定义（每个值多带一个 Source），而 `Value` 是所有东西的地基。
+
+### 最初的推进顺序
+
+| 步 | 内容 | 验收 |
+|---|---|---|
+| 1 | `value.mbt` + `error.mbt` | 构造几个 `Value`，`debug_inspect` 形状对 |
+| 2 | `merge.mbt` | 嵌套 `Table` 验证「后覆盖前、表逐 key 合、数组整体换」 |
+| 3 | `source.mbt` + `config.mbt` | 两个 `MemorySource` 合起来，`get_*` 取到值；缺 key 报 `MissingKey` |
+| 4 | `core/source/json_source/` | `Json` 文本 → `Value`，`Int` / `Float` 按有无小数点分开 |
+| 5 | `extract` | 大整数端到端不丢 |
+
+第 1~3 步做完，库就能用了（只是目前只有 `MemorySource`）。第 4、5 步各是独立的增量。
 
 ---
 
@@ -36,15 +48,15 @@
 - [x] XML（`core/source/xml_source/` 包，依赖 `Milky2018/xml`）
 - [x] CBOR（`core/source/cbor_source/` 包，依赖 `2515050242/cbor`）
 
-每加一种格式只做一件事：格式 → `Value`。合并、取值、校验都复用核心，不为格式写第二套逻辑。
+每加一种格式只做一件事：格式 → `Value`。合并、取值、校验都复用 `core/`，不为格式写第二套逻辑。
 
-**格式说的是内容怎么写，来源说的是从哪读。** `.env` 文件是一种格式，环境变量是一种来源，两件事分开做：`EnvSource` 读环境变量时不需要知道它最后变成哪种格式。
+**格式说的是内容怎么写，Source 说的是从哪读。** `.env` 文件是一种格式，环境变量是一种 Source，两件事分开做：`EnvSource` 读环境变量时不需要知道它最后变成哪种格式。
 
 **CBOR 是二进制格式，体积小，MCU 上常见。** 它也是检验 `Value` 表示能力的好例子——而这个检验的结果是：`Value` 原来少了一个形状。CBOR 有字节串，`Value` 原来没地方放它，所以 `ValueKind` 现在多了一个 `Bytes` 分支，`get_bytes` 把它原样取出来。其余的部分一一对得上：整数、字符串、数组、映射都不用特例。
 
-**代价**：YAML、TOML、XML 和 CBOR 都依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`、`2515050242/cbor`），所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，核心和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
+**代价**：YAML、TOML、XML 和 CBOR 都依赖第三方解析器（`moonbit-community/yaml`、`moonbit-community/toml`、`Milky2018/xml`、`2515050242/cbor`），所以每种格式单独一个包，`moon.pkg` 写各自的 `import`，`core/` 和已完成的 `json_source`、`ini_source`、`dotenv_source` 不受影响。
 
-**JSON、INI 和 `.env` 都是自己写的解析器，没有第三方依赖。** 三者都只用 core 的包：JSON 走 `@json`，INI 和 `.env` 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释；`.env` 的规则也写在包文档里：`export` 前缀可选、键名里的 `.` 变层级、单引号原样保留、双引号认转义、`#` 前面有空白才算行尾注释、不做变量展开。
+**JSON、INI 和 `.env` 都是自己写的解析器，没有第三方依赖。** 三者都只用 MoonBit 标准库的包：JSON 走 `@json`，INI 和 `.env` 走 `@string` 里的 `parse_int64` / `parse_double`。INI 的类型猜法写在包的文档注释里：段落变层级、引号强制字符串、`;` 和 `#` 只在整行开头算注释；`.env` 的规则也写在包文档里：`export` 前缀可选、键名里的 `.` 变层级、单引号原样保留、双引号认转义、`#` 前面有空白才算行尾注释、不做变量展开。
 
 **YAML 的语法交给 `moonbit-community/yaml`，本库只做 `Yaml` → `Value` 的转换。** 包文档写明了边界：只接受一个文档，空文件、空文档、只有注释的文件以及根节点为 `null` 的文件得到空表；根节点通常应是映射；整数超出 `Int64` 报错，不静默降级成浮点。
 
@@ -56,19 +68,19 @@
 
 ---
 
-## 外部来源　⬜
+## 外部 Source　⬜
 
-**方向**：把外部世界读成配置。IO 只发生在这里，核心那一层看不到文件和环境变量。
+**方向**：把外部世界读成配置。IO 只发生在这里，`core/` 那一层看不到文件和环境变量。
 
 - [ ] `FileSource`：读配置文件，格式交给上一层判断
 - [ ] `EnvSource`：读环境变量
-- [ ] 多个来源任意组合，优先级由加入顺序决定
+- [ ] 多个 Source 任意组合，优先级由加入顺序决定
 
 ### 环境变量是这一段里坑最多的
 
 环境变量全是字符串：
 
-- **类型推断必须在这一步做完**（`"5432"` → `Int`，`"true"` → `Bool`）。等到按结构体取值那步就晚了——core 的 `Bool::from_json` 和 `Double::from_json` 都拒收字符串。
+- **类型推断必须在这一步做完**（`"5432"` → `Int`，`"true"` → `Bool`）。等到按结构体取值那步就晚了——标准库的 `Bool::from_json` 和 `Double::from_json` 都拒收字符串。
 - 分隔符约定要定：`_` 变 `.`？大小写敏感？
 - 前缀、空值、列表值怎么处理。
 
@@ -111,22 +123,10 @@
 ## 依赖关系
 
 ```
-核心 ──→ 多格式 ──→ 外部来源 ──→ 自动发现格式 ──→ 热更新
+核心 ──→ 多格式 ──→ 外部 Source ──→ 自动发现格式 ──→ 热更新
   │
   └──→ 校验
 ```
 
 「校验」和「多格式」互不阻塞，可以先做任意一个。「自动发现格式」要等格式多于一种才有意义。
 
----
-
-## 实测记录
-
-| 实测 | 结果 | 影响 |
-|---|---|---|
-| `@json.parse("9007199254740993")` | `Number(9007199254740992, repr=Some(9007199254740993))` | 超出精确整数范围时 `repr` 留着原文 |
-| `@json.parse("30")`、`@json.parse("1.5")` | `repr` 均为 `None` | 常见情况拿不到原文，只能按值判断整数／浮点（详见 [docs/design.md 第 9 节](design.md#9-已实测的坑)更正） |
-| `from_json` 到 `Double`，输入字符串 `"1.5"` | 失败 `Double::from_json: expected number` | 字符串自动转数字在 Json 层做不到 |
-| `from_json` 到 `Bool`，输入字符串 `"true"` | 失败 `Bool::from_json: expected boolean` | 同上 |
-| `from_json` 到 `Int`，输入 `5432.7` | 成功，得 `5432` | **静默截断**，不报错 |
-| registry 上的 CBOR 库 | `mizchi/cbor`（下载量最高）用的是旧的 `moon.mod.json`，当前工具链拒绝安装 | 只能从 `2515050242/cbor`（纯 MoonBit、零传递依赖、完整 RFC 8949）和 `f4ah6o/simple-webauthn/cbor`（同样零依赖，但是子集：不支持半精度/单精度浮点、不支持不定长容器、而且**静默忽略尾随字节**）里选 |

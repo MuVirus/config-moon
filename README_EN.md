@@ -46,8 +46,7 @@ import {
 The core package `core/` provides `MemorySource` (holds a hand-built `Value`
 tree). Every other format has a package of its own, named
 `core/source/<format>_source` — add the one you need to your `moon.pkg`. The
-mapping rules live in each package's doc comment; the full list of packages is
-in [docs/design.md](docs/design.md).
+mapping rules live in each package's doc comment.
 
 Stack two sources and the later one wins:
 
@@ -204,7 +203,7 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 ✅ done (in maintenance)　🚧 in progress　⬜ not started
 
 The full item list and the trade-offs behind them live in
-[docs/roadmap.md](docs/roadmap.md).
+[docs/plan/roadmap.md](docs/plan/roadmap.md).
 
 ---
 
@@ -213,9 +212,7 @@ The full item list and the trade-offs behind them live in
 - `moon doc` —— generate the API reference into `_build/doc/`
 - `moon doc --serve` —— start a local preview (http://127.0.0.1:3000 by default)
 - `examples/` —— runnable examples, `moon run examples/<name>`
-- [docs/roadmap.md](docs/roadmap.md) —— the phased plan and the order of work
-- [docs/design.md](docs/design.md) —— type design, merge rules, why the packages are split, worked examples
-- [docs/testing.md](docs/testing.md) —— how tests are written here
+- [docs/AGENTS.md](docs/AGENTS.md) —— documentation index and writing rules
 
 > The documents under `docs/` are written in Chinese.
 

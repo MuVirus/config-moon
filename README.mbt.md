@@ -43,7 +43,7 @@ import {
 
 核心包 `core/` 提供 `MemorySource`（装自建的 `Value` 树）。其余格式各占一个包，
 名字是 `core/source/<格式>_source`，要加哪个格式就把哪个包写进 `moon.pkg`。
-映射规则在每个包的文档注释里，完整的包清单见 [docs/design.md](docs/design.md)。
+映射规则在每个包的文档注释里。
 
 叠加两个来源，后加入的覆盖先加入的：
 
@@ -198,7 +198,7 @@ try {
 
 ✅ 已完成（进入维护）　🚧 进行中　⬜ 未进行
 
-完整的条目和取舍见 [docs/roadmap.md](docs/roadmap.md)。
+完整的条目和取舍见 [docs/plan/roadmap.md](docs/plan/roadmap.md)。
 
 ---
 
@@ -207,9 +207,7 @@ try {
 - `moon doc` —— 生成 API 文档到 `_build/doc/`
 - `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
 - `examples/` —— 可运行示例，`moon run examples/<示例名>`
-- [docs/roadmap.md](docs/roadmap.md) —— 分阶段计划与推进顺序
-- [docs/design.md](docs/design.md) —— 类型设计、合并规则、包划分理由、完整示例
-- [docs/testing.md](docs/testing.md) —— 测试写法规范
+- [docs/AGENTS.md](docs/AGENTS.md) —— 文档索引与写作规范
 
 ---
 

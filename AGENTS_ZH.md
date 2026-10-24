@@ -33,11 +33,7 @@ XML、CBOR 以及内存中的表），把每个来源归一成同一种中间表
 
 ### 文档
 
-文档位于 `docs/`：
-
-- `design.md` —— 类型设计、合并规则、包布局
-- `roadmap.md` —— 待实现的方向与进度
-- `testing.md` —— 测试约定
+文档放在 `docs/`。放在哪、写什么，见 [`docs/AGENTS.md`](docs/AGENTS.md)。
 
 ## 项目结构
 
@@ -46,9 +42,10 @@ XML、CBOR 以及内存中的表），把每个来源归一成同一种中间表
 
 - 顶层目录有一个 `moon.mod`，记录模块元信息。
 
-- 核心包在 `core/`，来源包在 `core/source/`（一种格式一个目录），`docs/` 放设计、路线图和测试三个文档。
+- 核心包在 `core/`，来源包在 `core/source/`（一种格式一个目录）。文档放在 `docs/`，
+  见 [`docs/AGENTS.md`](docs/AGENTS.md)。
 
-- 测试遵循 `docs/testing.md`：公开 API 的示例写在 `///` 文档注释的 ` ```mbt check ` 代码块里，
+- 测试遵循 `docs/conventions/testing.md`：公开 API 的示例写在 `///` 文档注释的 ` ```mbt check ` 代码块里，
   私有逻辑放进 `_wbtest.mbt`，公开 API 的行为放进 `_test.mbt`。本项目不用内联测试。
 
 - `.githooks/pre-commit` 里有一个 pre-commit 钩子；每个 clone 执行一次

@@ -41,7 +41,7 @@ import {
 
 ````moonbit
 ///|
-/// 用一个 `Value` 构造内存来源
+/// 用一个 `Value` 构造 `MemorySource`
 ///
 /// Example:
 ///

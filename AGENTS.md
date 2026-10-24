@@ -39,11 +39,8 @@ The following constraints apply to all code in this repository:
 
 ### Documentation
 
-The documents live under `docs/`:
-
-- `design.md` — type design, merge rules, package layout
-- `roadmap.md` — directions still to be built and their status
-- `testing.md` — test conventions
+Documents live in `docs/`. Where each one goes and what belongs in it is in
+[`docs/AGENTS.md`](docs/AGENTS.md).
 
 ## Project Structure
 
@@ -56,10 +53,10 @@ The documents live under `docs/`:
   metadata.
 
 - The core package sits in `core/`; its sources sit in `core/source/`, one
-  directory per format, and `docs/` holds the design, roadmap and testing
-  documents.
+  directory per format. The documents live in `docs/`; see
+  [`docs/AGENTS.md`](docs/AGENTS.md).
 
-- Tests follow `docs/testing.md`: examples for public API live in `///` doc
+- Tests follow `docs/conventions/testing.md`: examples for public API live in `///` doc
   comments as ` ```mbt check ` blocks, private logic goes into `_wbtest.mbt`,
   public API behaviour goes into `_test.mbt`. This project does not use inline
   tests.
