@@ -322,3 +322,105 @@ test "Custom rule decides the merge" {
     .build()
   assert_eq(cfg.get_int("a"), 1L)
 }
+
+///|
+/// 不覆写 `origin` 的来源：默认没有来源可报
+struct QuietSource {
+  value : Value
+}
+
+///|
+pub impl @config.Source for QuietSource with fn collect(self : QuietSource) -> Value {
+  self.value
+}
+
+///|
+test "source without origin reports none" {
+  let source = QuietSource::{ value: Value::table({ "a": Value::int(1L) }), }
+  assert_true(@config.Source::origin(source) is None)
+  let cfg = Config::new().add(source).build()
+  assert_true(cfg.origin_of("a") is None)
+}
+
+///|
+/// 文本和字节来源都归到 `Custom`，标签说明是哪种
+test "StringSource and BytesSource report their labels" {
+  let text_origin = @config.Source::origin(
+    StringSource::new("hello", EchoFormat::{ }),
+  ).unwrap()
+  assert_eq(text_origin.kind, SourceKind::Custom)
+  assert_eq(text_origin.label, "string")
+  let bytes_origin = @config.Source::origin(
+    BytesSource::new(b"hi", EchoFormat::{ }),
+  ).unwrap()
+  assert_eq(bytes_origin.kind, SourceKind::Custom)
+  assert_eq(bytes_origin.label, "bytes")
+}
+
+///|
+/// origins() 把数组当叶子，不再往里拆下标
+test "origins treats arrays as leaves" {
+  let cfg = Config::new()
+    .add(
+      kinded(
+        Value::table({
+          "hosts": Value::array([Value::str("a"), Value::str("b")]),
+        }),
+        SourceKind::File,
+        "file:hosts.json",
+      ),
+    )
+    .build()
+  let origins = cfg.origins()
+  assert_eq(origins.length(), 1)
+  let (path, origin) = origins[0]
+  assert_eq(path, "hosts")
+  assert_eq(origin.label, "file:hosts.json")
+}
+
+///|
+/// 表节点的来源是最后碰它的那层，没被覆盖的叶子仍归原层
+test "table node origin follows the overriding layer" {
+  let cfg = Config::new()
+    .add(
+      kinded(
+        Value::table({
+          "db": Value::table({
+            "host": Value::str("localhost"),
+            "port": Value::int(5432L),
+          }),
+        }),
+        SourceKind::File,
+        "file:base.json",
+      ),
+    )
+    .add(
+      kinded(
+        Value::table({ "db": Value::table({ "port": Value::int(6543L) }) }),
+        SourceKind::Env,
+        "env:DB_PORT",
+      ),
+    )
+    .build()
+  let db = cfg.origin_of("db").unwrap()
+  assert_eq(db.label, "env:DB_PORT")
+  let host = cfg.origin_of("db.host").unwrap()
+  assert_eq(host.label, "file:base.json")
+}
+
+///|
+/// 路径穿过标量：origin_of 和「路径不存在」一样给 None
+test "origin_of returns none when the path crosses a scalar" {
+  let cfg = Config::new()
+    .add(MemorySource::new(Value::table({ "a": Value::int(1L) })))
+    .build()
+  let result = try {
+    match cfg.origin_of("a.b") {
+      None => "没有来源"
+      Some(_) => "不该有来源"
+    }
+  } catch {
+    e => "不该报错：\{e}"
+  }
+  assert_eq(result, "没有来源")
+}

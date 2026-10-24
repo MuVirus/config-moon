@@ -107,3 +107,82 @@ test "getters merge lazily" {
     .add(MemorySource::new(Value::table({ "a": Value::int(2L) })))
   assert_eq(cfg.get_int("a"), 2L)
 }
+
+///|
+/// 树里每个节点（含表节点、数组节点）的路径和来源标签
+fn node_origins(
+  value : Value,
+  prefix : String,
+  out : Array[(String, String)],
+) -> Unit {
+  match value.origin {
+    Some(origin) => out.push((prefix, origin.label))
+    None => ()
+  }
+  match value.kind {
+    ValueKind::Table(table) =>
+      for key, child in table {
+        let path = if prefix == "" { key } else { "\{prefix}.\{key}" }
+        node_origins(child, path, out)
+      }
+    ValueKind::Array(items) =>
+      for i, child in items {
+        node_origins(child, "\{prefix}[\{i}]", out)
+      }
+    _ => ()
+  }
+}
+
+///|
+/// 表合表时，合并出的表节点记覆盖方的来源，没被覆盖的叶子仍记原来源
+test "merge keeps the overriding table origin" {
+  let base = attach_origin(
+    Value::table({
+      "db": Value::table({ "host": Value::str("localhost") }),
+      "keep": Value::int(1L),
+    }),
+    Some(Origin::new(SourceKind::File, "file:base")),
+  )
+  let over = attach_origin(
+    Value::table({ "db": Value::table({ "port": Value::int(2L) }) }),
+    Some(Origin::new(SourceKind::Env, "env:over")),
+  )
+  let nodes = []
+  node_origins(merge(base, over), "", nodes)
+  let labels = nodes.map(fn(pair) { "\{pair.0}=\{pair.1}" })
+  assert_true(labels.contains("=env:over"))
+  assert_true(labels.contains("db=env:over"))
+  assert_true(labels.contains("db.host=file:base"))
+  assert_true(labels.contains("db.port=env:over"))
+  assert_true(labels.contains("keep=file:base"))
+}
+
+///|
+/// attach_origin 递归到底：表节点、数组节点、数组元素都带来源
+test "attach_origin marks table and array nodes" {
+  let value = attach_origin(
+    Value::table({
+      "db": Value::table({ "host": Value::str("localhost") }),
+      "hosts": Value::array([Value::str("a"), Value::str("b")]),
+    }),
+    Some(Origin::new(SourceKind::Cli, "cli:--set")),
+  )
+  let nodes = []
+  node_origins(value, "", nodes)
+  assert_eq(nodes.length(), 6)
+  for _, pair in nodes {
+    assert_eq(pair.1, "cli:--set")
+  }
+}
+
+///|
+/// 没有来源就原样返回，不凭空造一层
+test "attach_origin without origin leaves the tree alone" {
+  let value = attach_origin(
+    Value::table({ "a": Value::table({ "b": Value::int(1L) }) }),
+    None,
+  )
+  let nodes = []
+  node_origins(value, "", nodes)
+  assert_eq(nodes.length(), 0)
+}
