@@ -35,7 +35,7 @@ keywords = [
 
 preferred_target = "native"
 
-description = "MoonBit 原生配置库：多来源合并成一份配置，按 key 取值或提取成你自己的类型。"
+description = "MoonBit 原生配置库：一处声明，多来源汇入。"
 
 import {
   "Milky2018/xml@0.6.1",

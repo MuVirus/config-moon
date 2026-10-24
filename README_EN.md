@@ -20,6 +20,7 @@ A native configuration library for MoonBit.
 ## Features
 
 - **Type-safe configuration**: `derive(FromJson)` generates the deserialization for your config struct, so extracting a value yields that type directly. No code generator, no custom derive trait — MoonBit's own derive mechanism does the work
+- **Strict typing**: every read and every extraction checks the declared type; nothing is converted implicitly, and a mismatch is an error
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
@@ -67,22 +68,109 @@ cfg.get_int("db.port")      // 6543          ← overridden by the second
 
 ## Example
 
-Extract a configuration into a struct you declared, using the compiler's own
-`derive(FromJson)`. The library generates no code for your types:
+### Type safety
+
+Reads match the value's actual type exactly; no implicit conversion is performed:
 
 ```moonbit nocheck
-///|
-using @jsonsrc {extract_from}
+using @config {type Config}
+using @jsonsrc {type JsonSource, extract_from}
 
-///|
-struct DbCfg {
-  host : String
-  port : Int64
+let cfg = Config::new()
+  .add(JsonSource::from_str("{\"db\":{\"port\":\"5432\"}}"))
+  .build()
+
+cfg.get_string("db.port")   // "5432"
+cfg.get_int("db.port")      // error: 配置项 db.port 类型不符：期望 Int，实际 Str
+
+struct TextPort {
+  port : String
 } derive(FromJson)
 
-///|
+struct NumericPort {
+  port : Int
+} derive(FromJson)
+
+let text : TextPort = extract_from(cfg, "db")       // port = "5432"
+let numeric : NumericPort = extract_from(cfg, "db") // error: expected number, got string
+```
+
+### Read by key
+
+`MemorySource` holds your defaults; every getter checks the declared type and
+never converts:
+
+```moonbit nocheck
+using @config {type Config, type MemorySource, type Value}
+
+let cfg = Config::new()
+  .add(
+    MemorySource::new(
+      Value::table({
+        "db": Value::table({ "host": Value::str("localhost"), "port": Value::int(5432L) }),
+        "debug": Value::bool(false),
+        "ratio": Value::float(0.5),
+      }),
+    ),
+  )
+  .build()
+
+cfg.get_string("db.host")   // "localhost"
+cfg.get_int("db.port")      // 5432
+cfg.get_bool("debug")       // false
+cfg.get_float("ratio")      // 0.5
+```
+
+### Stacking sources
+
+Sources need not share a format; a later one overrides only the keys it shares:
+
+```moonbit nocheck
+using @config {type Config}
+using @jsonsrc {type JsonSource}
+using @inisrc {type IniSource}
+using @dotenvsrc {type DotenvSource}
+
+let cfg = Config::new()
+  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}")) // defaults
+  .add(IniSource::from_str("[db]\nport = 6000\n"))                              // config file
+  .add(DotenvSource::from_str("db.port=6543"))                                  // environment override
+  .build()
+
+cfg.get_string("db.host")   // "localhost"   only the first source provides it
+cfg.get_int("db.port")      // 6543          the last one wins
+```
+
+### Extract into a struct
+
+Using the compiler's own `derive(FromJson)`:
+
+```moonbit nocheck
+using @jsonsrc {extract_from}
+
+struct DbCfg {
+  host : String
+  port : Int
+} derive(FromJson)
+
 let db : DbCfg = extract_from(cfg, "db")
 ```
+
+### When it fails
+
+A missing key and a type mismatch raise `MissingKey` / `TypeMismatch`; the
+message names the key, the expected type and the actual type:
+
+```moonbit nocheck
+try {
+  cfg.get_int("db.host")
+} catch {
+  e => println(e)
+}
+```
+
+The code above prints `配置项 db.host 类型不符：期望 Int，实际 Str`; a missing
+key prints `配置项 db.user 不存在：没有任何来源提供它`.
 
 ---
 
@@ -108,6 +196,7 @@ The full item list and the trade-offs behind them live in
 
 - `moon doc` —— generate the API reference into `_build/doc/`
 - `moon doc --serve` —— start a local preview (http://127.0.0.1:3000 by default)
+- `examples/` —— runnable examples, `moon run examples/<name>`
 - [docs/roadmap.md](docs/roadmap.md) —— the phased plan and the order of work
 - [docs/design.md](docs/design.md) —— type design, merge rules, why the packages are split, worked examples
 - [docs/testing.md](docs/testing.md) —— how tests are written here

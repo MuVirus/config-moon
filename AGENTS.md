@@ -7,54 +7,43 @@ You can browse and install extra skills here:
 
 ## What this project is
 
-`moonfig` is a configuration library for MoonBit. It reads configuration
-from multiple sources (JSON text, in-memory tables, and later more formats),
-normalizes everything into one intermediate representation, merges the sources
-in layers (later sources override earlier ones), and lets the user read values
-by key or extract them into their own struct.
-
-The main line is:
+`moonfig` is a configuration library for MoonBit. It accepts configuration from
+multiple sources (JSON, INI, `.env`, YAML, TOML, XML, CBOR, and in-memory
+tables), normalizes every source into a single intermediate representation,
+merges the sources in layers (later sources override earlier ones), and exposes
+the result by key or by extraction into a user-defined struct:
 
 ```
 multiple sources  →  one intermediate representation  →  layered merge
                   →  read by key / extract into a struct
 ```
 
-Design constraints worth knowing before touching code:
+### Design constraints
 
-- Integers keep full precision. The intermediate representation stores integers
-  as `Int64`, not as a double, so large values survive the round trip.
-- The core (`Value` and merge logic) does not touch I/O and must compile on every
-  target. File and environment sources belong in separate subpackages.
-- Extraction into user structs reuses the compiler's built-in `derive(FromJson)`;
-  the library does not generate code or define custom derive traits.
-- Error messages must name the key, the expected type, and the actual type.
-- The module is split into packages: `MuVirus/moonfig/core` (core) and format
-  sources under `MuVirus/moonfig/core/source/`, one directory per format.
-  Leaving the alias off binds the directory name, which also compiles, but every
-  `moon.pkg` here spells the alias out (`@config`, `@jsonsrc`) so the short name
-  survives a future directory change.
-- A package must not be named after a core package, not even when every import
-  uses an explicit alias. The package name itself occupies a global name, so a
-  package called `json` keeps `moonbitlang/core/json` from loading at all and
-  its self-references fail to resolve. Keep the `_source` suffix.
-- Methods cannot cross package boundaries (`4059: Cannot define method for
-  foreign type`). A helper on another package's type has to be a free function:
-  `to_json(v)`, not `v.to_json()`. Prefer free functions for anything that might
-  end up in a different package later.
+The following constraints apply to all code in this repository:
 
-Read `docs/design.md` before implementing anything. `docs/roadmap.md` lists the
-directions still to be built, each marked done, in progress or not started.
-`docs/testing.md` is the test convention for this project.
+- **Integer precision.** Integers are stored as `Int64`, never as floating point.
+- **The core is platform-independent.** It contains no platform-specific code
+  and must compile on every target; file and environment sources are separate
+  subpackages.
+- **Struct extraction.** Extraction uses MoonBit's native `derive(FromJson)`;
+  MoonBit currently supports neither deriving third-party traits nor macros.
+- **Error messages.** Every message names the key, the expected type and the
+  actual type.
+- **Package layout.** `core/` plus one package per format under `core/source/`;
+  always write import aliases explicitly (`@config`, `@jsonsrc`).
+- **Package names.** Never name a package after a core package; format packages
+  keep the `_source` suffix.
+- **Cross-package helpers.** Methods cannot cross packages (`4059`); use free
+  functions such as `to_json(v)`.
 
-Implemented today: the core package (`Value`, path lookup, merge, error
-handling, `Config`, `MemorySource`, extraction into user structs) and the source
-packages under `core/source/`: JSON (`JsonSource`, `to_json`, `extract_from`),
-INI (`IniSource`, hand-written parser), `.env` (`DotenvSource`, hand-written
-parser), YAML (`YamlSource`, parsing backed by `moonbit-community/yaml`), TOML
-(`TomlSource`, parsing backed by `moonbit-community/toml`), XML
-(`XmlSource`, parsing backed by `Milky2018/xml`) and CBOR
-(`CborSource`, parsing backed by `2515050242/cbor`).
+### Documentation
+
+The documents live under `docs/`:
+
+- `design.md` — type design, merge rules, package layout
+- `roadmap.md` — directions still to be built and their status
+- `testing.md` — test conventions
 
 ## Project Structure
 

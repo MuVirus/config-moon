@@ -7,42 +7,37 @@
 
 ## 这个项目是什么
 
-`moonfig` 是一个用 MoonBit 写的配置库。它从多个来源读取配置（JSON 文本、内存里的表，以后还会有更多格式），
-把它们归一成一种中间表示，按层合并这些来源（后加入的覆盖先加入的），并让用户按键读取值，
-或者提取到自己的结构体。
-
-主线是：
+`moonfig` 是一个 MoonBit 配置库。它接受来自多个来源的配置（JSON、INI、`.env`、YAML、TOML、
+XML、CBOR 以及内存中的表），把每个来源归一成同一种中间表示，再按层合并（后加入的来源覆盖
+先加入的），最后按键读取，或提取到用户定义的结构体：
 
 ```
 多个来源  →  一种中间表示  →  按层合并
           →  按键取值 / 提取到结构体
 ```
 
-动手改代码前值得知道的设计约束：
+### 设计约束
 
-- 整数保持完整精度。中间表示把整数存成 `Int64`，而不是 double，这样大数值能原样往返。
-- 核心（`Value` 和合并逻辑）不碰 I/O，必须在所有 target 上都能编译。文件和环境变量来源属于独立的子包。
-- 提取到用户结构体复用编译器自带的 `derive(FromJson)`；这个库不生成代码，也不定义自定义的 derive trait。
-- 错误消息必须写出键名、期望类型和实际类型。
-- 模块按包拆分：`MuVirus/moonfig/core`（核心）和 `MuVirus/moonfig/core/source/` 下的来源包
-  （一种格式一个目录）。省略别名时 MoonBit 按目录名绑定，实测也能编译；
-  但本项目一律显式写出别名（`@config`、`@jsonsrc`），目录将来再调整时用户的写法不用跟着改。
-- 包名不能和 core 里的包同名，哪怕每条 import 都写了显式别名也不行。包名本身占一个全局名字，
-  叫 `json` 的包会让 `moonbitlang/core/json` 根本加载不进来，它自己的自引用也解析不到。
-  所以格式包一律保留 `_source` 后缀。
-- 方法不能跨包（`4059: Cannot define method for foreign type`）。要给别的包的类型配一个辅助函数，
-  只能写成自由函数：`to_json(v)`，而不是 `v.to_json()`。凡是以后可能挪到别的包里去的，都优先写成自由函数。
+以下约束适用于本仓库的全部代码：
 
-动手实现任何东西之前先读 `docs/design.md`。`docs/roadmap.md` 列着还要做的方向，每个都标了已完成、
-进行中或未进行。`docs/testing.md` 是本项目的测试约定。
+- **整数精度。** 整数一律存为 `Int64`，不使用浮点数。
+- **core 无平台依赖。** core 不含平台相关代码，必须在所有 target 上编译通过；文件与环境变量来源放在
+  独立子包。
+- **结构体提取。** 提取使用 MoonBit 原生的 `derive(FromJson)`；MoonBit 暂不支持派生第三方 trait，
+  也不支持宏定义。
+- **错误消息。** 每条消息写出键名、期望类型和实际类型。
+- **包布局。** `core/` 加上 `core/source/` 下一种格式一个包；import 别名一律显式写出
+  （`@config`、`@jsonsrc`）。
+- **包名。** 包名不得与 core 中的包重名；格式包保留 `_source` 后缀。
+- **跨包辅助函数。** 方法不能跨包（`4059`）；改用自由函数，如 `to_json(v)`。
 
-目前已实现：核心包（`Value`、路径取值、合并、错误处理、`Config`、`MemorySource`、提取到用户结构体）
-和 `core/source/` 下的来源包：JSON（`JsonSource`、`to_json`、`extract_from`）、
-INI（`IniSource`，解析器自己写）、`.env`（`DotenvSource`，解析器自己写）、
-YAML（`YamlSource`，解析交给 `moonbit-community/yaml`）、
-TOML（`TomlSource`，解析交给 `moonbit-community/toml`）、
-XML（`XmlSource`，解析交给 `Milky2018/xml`）与
-CBOR（`CborSource`，解析交给 `2515050242/cbor`）。
+### 文档
+
+文档位于 `docs/`：
+
+- `design.md` —— 类型设计、合并规则、包布局
+- `roadmap.md` —— 待实现的方向与进度
+- `testing.md` —— 测试约定
 
 ## 项目结构
 

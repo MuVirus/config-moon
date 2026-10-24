@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/examples/strict_types"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type NumericPort derive(@json.FromJson)
+pub fn NumericPort::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+type TextualPort derive(@json.FromJson)
+pub fn TextualPort::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+// Type aliases
+
+// Traits

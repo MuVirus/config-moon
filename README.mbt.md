@@ -64,21 +64,107 @@ cfg.get_int("db.port")      // 6543          ← 第二个来源覆盖
 
 ## 示例
 
-从配置中提取到已声明的结构体，使用编译器自带的 `derive(FromJson)`，库无需为用户类型生成任何代码：
+### 类型安全
+
+取值按实际类型严格匹配，不做隐式转换：
 
 ```moonbit nocheck
-///|
-using @jsonsrc {extract_from}
+using @config {type Config}
+using @jsonsrc {type JsonSource, extract_from}
 
-///|
-struct DbCfg {
-  host : String
-  port : Int64
+let cfg = Config::new()
+  .add(JsonSource::from_str("{\"db\":{\"port\":\"5432\"}}"))
+  .build()
+
+cfg.get_string("db.port")   // "5432"
+cfg.get_int("db.port")      // 报错：配置项 db.port 类型不符：期望 Int，实际 Str
+
+struct TextPort {
+  port : String
 } derive(FromJson)
 
-///|
+struct NumericPort {
+  port : Int
+} derive(FromJson)
+
+let text : TextPort = extract_from(cfg, "db")       // port = "5432"
+let numeric : NumericPort = extract_from(cfg, "db") // 报错：期望数字，实际字符串
+```
+
+### 按键取值
+
+`MemorySource` 装默认值，按声明的类型取值；形状不符就报错，不做转换：
+
+```moonbit nocheck
+using @config {type Config, type MemorySource, type Value}
+
+let cfg = Config::new()
+  .add(
+    MemorySource::new(
+      Value::table({
+        "db": Value::table({ "host": Value::str("localhost"), "port": Value::int(5432L) }),
+        "debug": Value::bool(false),
+        "ratio": Value::float(0.5),
+      }),
+    ),
+  )
+  .build()
+
+cfg.get_string("db.host")   // "localhost"
+cfg.get_int("db.port")      // 5432
+cfg.get_bool("debug")       // false
+cfg.get_float("ratio")      // 0.5
+```
+
+### 多来源叠加
+
+来源之间不必同一种格式，后加入的只覆盖同名键：
+
+```moonbit nocheck
+using @config {type Config}
+using @jsonsrc {type JsonSource}
+using @inisrc {type IniSource}
+using @dotenvsrc {type DotenvSource}
+
+let cfg = Config::new()
+  .add(JsonSource::from_str("{\"db\":{\"host\":\"localhost\",\"port\":5432}}")) // 默认值
+  .add(IniSource::from_str("[db]\nport = 6000\n"))                              // 配置文件
+  .add(DotenvSource::from_str("db.port=6543"))                                  // 环境覆盖
+  .build()
+
+cfg.get_string("db.host")   // "localhost"   只有第一个来源提供
+cfg.get_int("db.port")      // 6543          最后加入的赢
+```
+
+### 提取到结构体
+
+使用编译器自带的 `derive(FromJson)`：
+
+```moonbit nocheck
+using @jsonsrc {extract_from}
+
+struct DbCfg {
+  host : String
+  port : Int
+} derive(FromJson)
+
 let db : DbCfg = extract_from(cfg, "db")
 ```
+
+### 出错时
+
+缺键和类型不符分别报 `MissingKey` / `TypeMismatch`，默认消息带键名、期望类型和实际类型：
+
+```moonbit nocheck
+try {
+  cfg.get_int("db.host")
+} catch {
+  e => println(e)
+}
+```
+
+上面得到 `配置项 db.host 类型不符：期望 Int，实际 Str`；缺键则得到
+`配置项 db.user 不存在：没有任何来源提供它`。
 
 ---
 
@@ -104,6 +190,7 @@ let db : DbCfg = extract_from(cfg, "db")
 
 - `moon doc` —— 生成 API 文档到 `_build/doc/`
 - `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
+- `examples/` —— 可运行示例，`moon run examples/<示例名>`
 - [docs/roadmap.md](docs/roadmap.md) —— 分阶段计划与推进顺序
 - [docs/design.md](docs/design.md) —— 类型设计、合并规则、包划分理由、完整示例
 - [docs/testing.md](docs/testing.md) —— 测试写法规范
