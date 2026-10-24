@@ -9,8 +9,9 @@
 > 包名本身占一个全局名字：自己的包叫 `json`，`moonbitlang/core/json` 就根本加载不进来
 > （`Package "json" not found in the loaded packages`），它的 `.mbti` 里 `@json.JsonPath`
 > 这类自引用随之失效。把标准库那边的 import 写成 `@corejson` 也没用——冲突发生在包名，
-> 不在别名上。结论：格式 package 一律保留 `_source` 后缀，`toml_source`、`env_source` 同理
-> （`env` 会和 `moonbitlang/core/env` 撞，`file` 迟早也会撞上什么）。
+> 不在别名上。结论：包名一律带后缀，避免撞名（`env` 会和 `moonbitlang/core/env` 撞，
+> `file` 迟早也会撞上什么）。后缀写清包里提供什么：格式包 `_format`，Source 包 `_source`。
+> 2026-10 格式包改成只提供 `Format` 后，后缀从 `_source` 改成 `_format`，撞名这个结论不变。
 
 ## 2. 方法不能跨包
 

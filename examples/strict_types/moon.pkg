@@ -1,6 +1,6 @@
 import {
   "MuVirus/moonfig/core" @config,
-  "MuVirus/moonfig/core/source/json_source" @jsonsrc,
+  "MuVirus/moonfig/core/format/json_format" @jsonfmt,
   "moonbitlang/core/json",
 }
 

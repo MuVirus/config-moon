@@ -18,7 +18,7 @@
 - [x] `Config` 构建器与 `get_string` / `get_int` / `get_bool` / `get_float`
 - [x] 错误处理：`MissingKey` / `TypeMismatch` / `ParseError`
 - [x] 按结构体取值（`derive(FromJson)`）
-- [ ] Source 追踪：某个键最终来自哪一层
+- [ ] Source 追踪：某个键最终来自哪一层，见 [sources.md](../design/sources.md#来源追踪)
 
 **为什么还是进行中**：Source 追踪要么现在就把 Source 带进 `Value`，越晚定代价越大——事后补要改 `Value` 的定义（每个值多带一个 Source），而 `Value` 是所有东西的地基。
 
@@ -74,6 +74,7 @@
 
 - [ ] `FileSource`：读配置文件，格式交给上一层判断
 - [ ] `EnvSource`：读环境变量
+- [ ] `CliSource`：读命令行参数
 - [ ] 多个 Source 任意组合，优先级由加入顺序决定
 
 ### 环境变量是这一段里坑最多的

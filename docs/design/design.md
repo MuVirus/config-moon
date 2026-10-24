@@ -37,10 +37,14 @@ fn merge(base : Value, over : Value) -> Value
 
 ## 3. 配置对象与取值
 
+`Config` 持有 `sources`、`rule`、`value` 三个字段：`add` 只 append，`build` 按 `rule` 把 Source 逐个 merge 成一棵树，之后的 `get_*` 都从这棵树按路径取值。它不认识具体格式，只认识 `Source`。
+
+`MergeRule` 默认 `LastWins`（后加覆盖先加），另有 `FirstWins`、`ByKind(Array[SourceKind])` 和 `Custom(fn)`。规则是整份 `Config` 的，不做单层特殊；要单层特殊就给 `Source` 包一层。
+
 ```moonbit
 let cfg = Config::new()
   .add(MemorySource::new(table))
-  .add(JsonSource::from_str(text))
+  .add(StringSource::new(text, JsonFormat))
   .build()                       // 依次合并，后加者优先
 
 cfg.get_string("db.host")        // String
@@ -67,6 +71,6 @@ pub suberror ConfigError {
 
 ## 设计文档
 
-- [sources.md](sources.md) —— Source 接口、package 划分、第三方解析器的取舍
+- [sources.md](sources.md) —— Source / Format 模型、package 划分与来源追踪
 - [extract.md](extract.md) —— 提取到结构体、整数映射、错误消息
 - [../decisions/decisions.md](../decisions/decisions.md) —— 决策记录

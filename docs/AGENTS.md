@@ -8,12 +8,13 @@
 - `AGENTS.md` —— 本文件：文档放在哪、索引
 - `design/` —— 设计文档，讲「为什么这样定」
   - [`design.md`](design/design.md) —— 主线与核心数据模型
-  - [`sources.md`](design/sources.md) —— Source 接口、package 划分、第三方解析器的取舍
+  - [`sources.md`](design/sources.md) —— Source / Format 接口、core 边界、package 划分、来源追踪、第三方解析器的取舍
   - [`extract.md`](design/extract.md) —— 提取到结构体、整数映射、错误消息
 - `decisions/` —— 决策记录，讲「当时为什么这么定」
   - [`decisions.md`](decisions/decisions.md) —— 包名、跨包方法、Bytes、JSON 数值、CBOR 选型
 - `plan/` —— 计划文档，讲「接下来做什么」
   - [`roadmap.md`](plan/roadmap.md) —— 待实现的方向、进度
+  - [`source-model.md`](plan/source-model.md) —— Source 模型收敛的改动清单与顺序
 - `conventions/` —— 项目规范，讲「怎么做」
   - [`testing.md`](conventions/testing.md) —— 测试写法
 

@@ -11,10 +11,10 @@
 ///   两条路互不交叉
 
 ///|
-using @config {type Config}
+using @config {type Config, type StringSource}
 
 ///|
-using @jsonsrc {type JsonSource, extract_from}
+using @jsonfmt {type JsonFormat, extract_from}
 
 ///|
 /// 端口声明成数字，只该接受数字来源
@@ -77,10 +77,20 @@ fn read_textual(cfg : Config) -> String {
 ///|
 fn main raise {
   let numeric = Config::new()
-    .add(JsonSource::from_str("{\"db\":{\"port\":5432,\"name\":\"main\"}}"))
+    .add(
+      StringSource::new(
+        "{\"db\":{\"port\":5432,\"name\":\"main\"}}",
+        JsonFormat,
+      ),
+    )
     .build()
   let textual = Config::new()
-    .add(JsonSource::from_str("{\"db\":{\"port\":\"5432\",\"name\":\"main\"}}"))
+    .add(
+      StringSource::new(
+        "{\"db\":{\"port\":\"5432\",\"name\":\"main\"}}",
+        JsonFormat,
+      ),
+    )
     .build()
 
   let n_int = read_int(numeric, "db.port")
