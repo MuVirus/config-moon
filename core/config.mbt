@@ -50,14 +50,15 @@ fn Config::merged(self : Config) -> Value raise ConfigError {
   let rule = self.rule
   let mut acc : Value? = None
   for source in ordered {
-    let layer = attach_origin(source.collect(), source.origin())
+    let layer = source.collect()
+    let value = attach_origin(layer.value, layer.origin)
     acc = Some(
       match acc {
-        None => layer
+        None => value
         Some(base) =>
           match rule {
-            MergeRule::Custom(custom) => custom(base, layer)
-            _ => merge(base, layer)
+            MergeRule::Custom(custom) => custom(base, value)
+            _ => merge(base, value)
           }
       },
     )
@@ -74,11 +75,7 @@ fn Config::ordered_sources(self : Config) -> Array[&Source] {
     MergeRule::ByKind(order) => {
       let keyed : Array[(Int32, Int32, &Source)] = []
       for i, source in self.sources {
-        let kind = match source.origin() {
-          Some(origin) => origin.kind
-          None => SourceKind::Custom
-        }
-        keyed.push((kind_rank(kind, order), i, source))
+        keyed.push((kind_rank(source.kind(), order), i, source))
       }
       keyed.sort_by(fn(a, b) {
         if a.0 != b.0 {
@@ -96,9 +93,9 @@ fn Config::ordered_sources(self : Config) -> Array[&Source] {
 ///|
 /// 给整棵树补上来源；表节点和数组节点也带上，叶子才有意义。
 ///
-/// 已经有来源的节点保持不动：环境变量、命令行这类 Source 会按 key 自己标叶子，
+/// 已经有来源的节点保持不动：组合来源可以先给子树标好各自的 site，
 /// 这里只补它们没标到的节点。
-fn attach_origin(value : Value, origin : Origin?) -> Value {
+fn attach_origin(value : Value, origin : &OriginSite?) -> Value {
   match origin {
     None => value
     Some(_) => {
@@ -192,7 +189,16 @@ pub fn Config::get_value(
   self : Config,
   path : String,
 ) -> Value raise ConfigError {
-  self.merged().get_path(path)
+  self.get_value_at(KeyPath::parse(path))
+}
+
+///|
+/// 取路径上的原始值，路径已经拆好段
+pub fn Config::get_value_at(
+  self : Config,
+  path : KeyPath,
+) -> Value raise ConfigError {
+  self.merged().get_at(path)
 }
 
 ///|
@@ -201,39 +207,48 @@ pub fn Config::origin_of(
   self : Config,
   path : String,
 ) -> Origin? raise ConfigError {
-  let value = self.get_value(path) catch {
+  self.origin_at(KeyPath::parse(path))
+}
+
+///|
+/// 某个路径最终来自哪一层，路径已经拆好段
+pub fn Config::origin_at(
+  self : Config,
+  path : KeyPath,
+) -> Origin? raise ConfigError {
+  let value = self.get_value_at(path) catch {
     ConfigError::MissingKey(_) | ConfigError::TypeMismatch(_, _, _) =>
       return None
     error => raise error
   }
-  value.origin
+  match value.origin {
+    Some(site) => Some(Origin::{ site, path, })
+    None => None
+  }
 }
 
 ///|
 /// 所有叶子路径和它们的来源，适合做 `--print-config` 这类诊断命令。
-pub fn Config::origins(
-  self : Config,
-) -> Array[(String, Origin)] raise ConfigError {
-  let result : Array[(String, Origin)] = []
-  collect_origins(self.merged(), "", result)
+pub fn Config::origins(self : Config) -> Array[Origin] raise ConfigError {
+  let result : Array[Origin] = []
+  collect_origins(self.merged(), KeyPath::root(), result)
   result
 }
 
 ///|
 fn collect_origins(
   value : Value,
-  prefix : String,
-  result : Array[(String, Origin)],
+  path : KeyPath,
+  result : Array[Origin],
 ) -> Unit {
   match value.kind {
     ValueKind::Table(table) =>
       for key, child in table {
-        let path = if prefix == "" { key } else { "\{prefix}.\{key}" }
-        collect_origins(child, path, result)
+        collect_origins(child, path.add(key), result)
       }
     _ =>
       match value.origin {
-        Some(origin) => result.push((prefix, origin))
+        Some(site) => result.push(Origin::{ site, path, })
         None => ()
       }
   }

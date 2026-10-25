@@ -25,7 +25,7 @@ A native configuration library for MoonBit.
 - **Layered sources**: in-memory defaults, config files, environment variables and command-line flags stack in the order you add them, later ones winning
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
-- **Traceable origins**: `origin_of` / `origins()` tell you which layer a value finally came from
+- **Traceable origins**: `origin_of` / `origins()` give you the source object and a structured key path; the display label is generated on demand
 
 ---
 
@@ -195,12 +195,15 @@ let cfg = Config::new()
   .build()
 
 let origin = cfg.origin_of("db.port").unwrap()
-origin.kind    // SourceKind::Memory
-origin.label   // "memory"
-cfg.origins()  // [("db.port", Origin { ... })], leaves only
+origin.kind()             // SourceKind::Memory
+origin.label()            // "memory"
+origin.path().to_string() // "db.port"
+cfg.origins()             // [Origin { ... }], leaves only
 ```
 
-`origin.kind` is there for pattern matching; `label` is display-only and never parsed back. The queries merge on demand when `build()` has not run, so they can raise.
+`origin.kind()` is there for pattern matching; `origin.path()` gives a structured `KeyPath`, so you never
+have to split a string; `label()` is display-only and generated on demand. Use `origin.locator()` to
+re-read the original bytes. The queries merge on demand when `build()` has not run, so they can raise.
 
 ### Extract into a struct
 

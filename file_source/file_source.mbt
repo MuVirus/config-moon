@@ -6,6 +6,9 @@
 ///
 /// 读不到文件时抛 `ConfigError::IoError`，消息里带路径和底层原因；
 /// 文件内容解析失败时仍由 `Format` 抛 `ConfigError::ParseError`。
+///
+/// `FileSource` 同时是这层的 `OriginSite`：标签是文件路径，`locator` 就是它自己，
+/// 拿到 `origin` 后可以重新读同一个文件。
 pub struct FileSource {
   path : String
   format : &@config.Format
@@ -27,23 +30,42 @@ pub impl @config.Locator for FileSource with fn read(self : FileSource) -> Bytes
 }
 
 ///|
-/// 文件内容交给格式解析
-pub impl @config.Source for FileSource with fn collect(self : FileSource) -> @config.Value raise @config.ConfigError {
-  self.format.decode(@config.Locator::read(self))
+/// 文件来源的标签就是文件路径
+pub impl @config.OriginSite for FileSource with fn kind(_ : FileSource) -> @config.SourceKind {
+  @config.SourceKind::File
 }
 
 ///|
-/// 来源带 `Locator`：拿到 `origin` 后可以重新读同一个文件
-pub impl @config.Source for FileSource with fn origin(self : FileSource) -> @config.Origin? {
-  Some(@config.Origin::{
-    kind: @config.SourceKind::File,
-    label: "file:\{self.path}",
-    locator: Some(self as &@config.Locator),
-  })
+pub impl @config.OriginSite for FileSource with fn describe(
+  self : FileSource,
+  _ : @config.KeyPath,
+) -> String {
+  "file:\{self.path}"
+}
+
+///|
+/// 文件来源能反推原始字节
+pub impl @config.OriginSite for FileSource with fn locator(self : FileSource) -> &@config.Locator? {
+  Some(self as &@config.Locator)
+}
+
+///|
+/// 文件内容交给格式解析
+pub impl @config.Source for FileSource with fn collect(self : FileSource) -> @config.Layer raise @config.ConfigError {
+  let value = self.format.decode(@config.Locator::read(self))
+  @config.Layer::new(value, Some(self as &@config.OriginSite))
+}
+
+///|
+pub impl @config.Source for FileSource with fn kind(_ : FileSource) -> @config.SourceKind {
+  @config.SourceKind::File
 }
 
 ///|
 pub extend FileSource with @config.Locator::{read}
 
 ///|
-pub extend FileSource with @config.Source::{collect, origin}
+pub extend FileSource with @config.OriginSite::{describe, locator}
+
+///|
+pub extend FileSource with @config.Source::{collect, kind}

@@ -16,10 +16,34 @@
 /// **同一个键写两次，后写的赢。** 但标量和层级互相挡路时（`--a=1 --a.b=2`、
 /// `--a.b=1 --a=2`）报 `ParseError`，不静默丢掉前一个值。
 ///
-/// 每个叶子都自带 `Origin`：`kind` 是 `Cli`，标签是 `cli:--LOG-LEVEL` 这种
-/// 不带值的写法，密码不会漏进日志。
+/// 整层共用一个 site：`describe` 按路径查回原始参数名，标签是不带值的写法
+/// （`cli:--log-level`），密码不会漏进日志。
 pub struct CliSource {
   args : Array[String]
+}
+
+///|
+/// 命令行层的 site：保留「路径 → 原始参数名」的索引。
+///
+/// 参数名去掉 `=value` 才存进来；`describe` 时才拼成 `cli:--log-level`。
+priv struct CliSite {
+  names : Map[String, String]
+}
+
+///|
+impl @config.OriginSite for CliSite with fn kind(_ : CliSite) -> @config.SourceKind {
+  @config.SourceKind::Cli
+}
+
+///|
+impl @config.OriginSite for CliSite with fn describe(
+  self : CliSite,
+  path : @config.KeyPath,
+) -> String {
+  match self.names.get(path.to_string()) {
+    Some(arg) => "cli:\{arg}"
+    None => "cli:args"
+  }
 }
 
 ///|
@@ -48,7 +72,7 @@ pub fn CliSource::from_args(args : Array[String]) -> CliSource {
 }
 
 ///|
-pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @config.Value raise @config.ConfigError {
+pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @config.Layer raise @config.ConfigError {
   let root : Map[String, @config.Value] = Map([])
   let seen : Map[String, String] = Map([])
   for arg in self.args {
@@ -67,7 +91,8 @@ pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @conf
       Some(pair) => pair.0
       None => rest
     }
-    let label = "cli:--\{key}"
+    // 标签只留参数名，不带值
+    let name = "--\{key}"
     let path = match split {
       Some(_) => key_path(key)
       None =>
@@ -81,7 +106,7 @@ pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @conf
         @config.Value::from_literal(pair.1) catch {
           @config.ConfigError::ParseError(message) =>
             raise @config.ConfigError::ParseError(
-              "参数 \{label}：\{message}",
+              "参数 cli:\{name}：\{message}",
             )
           error => raise error
         }
@@ -91,24 +116,21 @@ pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @conf
           None => @config.Value::bool(true)
         }
     }
-    assign(root, seen, path, label, value)
+    assign(root, seen, path, name, value)
   }
-  @config.Value::table(root)
+  @config.Layer::new(
+    @config.Value::table(root),
+    Some(CliSite::{ names: seen, } as &@config.OriginSite),
+  )
 }
 
 ///|
-/// 整层来源报 `Cli`
-pub impl @config.Source for CliSource with fn origin(_ : CliSource) -> @config.Origin? {
-  Some(cli_origin("cli:args"))
+pub impl @config.Source for CliSource with fn kind(_ : CliSource) -> @config.SourceKind {
+  @config.SourceKind::Cli
 }
 
 ///|
-pub extend CliSource with @config.Source::{collect, origin}
-
-///|
-fn cli_origin(label : String) -> @config.Origin {
-  @config.Origin::{ kind: @config.SourceKind::Cli, label, locator: None, }
-}
+pub extend CliSource with @config.Source::{collect, kind}
 
 ///|
 /// 参数名 → 层级路径：按 `-` 和 `.` 拆层，统一转小写。
@@ -148,7 +170,7 @@ fn assign(
   root : Map[String, @config.Value],
   seen : Map[String, String],
   path : Array[String],
-  label : String,
+  name : String,
   value : @config.Value,
 ) -> Unit raise @config.ConfigError {
   let mut cur = root
@@ -164,7 +186,7 @@ fn assign(
           k => {
             let owner = seen.get(joined).unwrap_or("?")
             raise @config.ConfigError::ParseError(
-              "参数 \{label}：\{joined} 已经是 \{k.name()}（由 \{owner} 提供），不能当层级名",
+              "参数 cli:\{name}：\{joined} 已经是 \{k.name()}（由 cli:\{owner} 提供），不能当层级名",
             )
           }
         }
@@ -184,12 +206,12 @@ fn assign(
       match existing.kind {
         @config.ValueKind::Table(_) =>
           raise @config.ConfigError::ParseError(
-            "参数 \{label}：\{joined} 下面已经有配置，不能整个覆盖",
+            "参数 cli:\{name}：\{joined} 下面已经有配置，不能整个覆盖",
           )
         _ => ()
       }
     None => ()
   }
-  seen[joined] = label
-  cur[leaf] = value.with_origin(cli_origin(label))
+  seen[joined] = name
+  cur[leaf] = value
 }

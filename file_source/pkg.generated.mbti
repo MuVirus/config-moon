@@ -14,11 +14,14 @@ pub struct FileSource {
   path : String
   format : &@core.Format
 }
-pub fn FileSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn FileSource::collect(Self) -> @core.Layer raise @core.ConfigError
+pub fn FileSource::describe(Self, @core.KeyPath) -> String
+pub fn FileSource::kind(Self) -> @core.SourceKind
+pub fn FileSource::locator(Self) -> &@core.Locator?
 pub fn FileSource::new(String, &@core.Format) -> Self
-pub fn FileSource::origin(Self) -> @core.Origin?
 pub fn FileSource::read(Self) -> Bytes raise @core.ConfigError
 pub impl @core.Locator for FileSource
+pub impl @core.OriginSite for FileSource
 pub impl @core.Source for FileSource
 
 // Type aliases

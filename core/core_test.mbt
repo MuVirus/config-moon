@@ -9,7 +9,6 @@ using @config {
   type ConfigError,
   type MemorySource,
   type MergeRule,
-  type Origin,
   type SourceKind,
   type StringSource,
   type Value,
@@ -150,14 +149,14 @@ impl @config.Format for EchoFormat with fn decode(_ : EchoFormat, bytes : Bytes)
 /// 文本先编码成字节，再交给格式
 test "StringSource encodes text before decoding" {
   let source = StringSource::new("hello", EchoFormat::{ })
-  assert_eq(@config.Source::collect(source), Value::str("hello"))
+  assert_eq(@config.Source::collect(source).value, Value::str("hello"))
 }
 
 ///|
 /// 字节原样交给格式
 test "BytesSource passes bytes through" {
   let source = BytesSource::new(b"hi", EchoFormat::{ })
-  assert_eq(@config.Source::collect(source), Value::str("hi"))
+  assert_eq(@config.Source::collect(source).value, Value::str("hi"))
 }
 
 ///|
@@ -178,25 +177,46 @@ fn type_error_of(expected : String, f : () -> Unit raise ConfigError) -> String 
 }
 
 ///|
-/// 测试用的来源：值、来源都自己给
+/// 测试用的来源：值和来源对象都自己给
+struct KindedSite {
+  kind : SourceKind
+  label : String
+}
+
+///|
+impl @config.OriginSite for KindedSite with fn kind(self : KindedSite) -> SourceKind {
+  self.kind
+}
+
+///|
+impl @config.OriginSite for KindedSite with fn describe(
+  self : KindedSite,
+  _ : @config.KeyPath,
+) -> String {
+  self.label
+}
+
+///|
 struct KindedSource {
   value : Value
-  origin : Origin
+  site : &@config.OriginSite
 }
 
 ///|
-pub impl @config.Source for KindedSource with fn collect(self : KindedSource) -> Value {
-  self.value
+pub impl @config.Source for KindedSource with fn collect(self : KindedSource) -> @config.Layer {
+  @config.Layer::new(self.value, Some(self.site))
 }
 
 ///|
-pub impl @config.Source for KindedSource with fn origin(self : KindedSource) -> Origin? {
-  Some(self.origin)
+pub impl @config.Source for KindedSource with fn kind(self : KindedSource) -> SourceKind {
+  @config.OriginSite::kind(self.site)
 }
 
 ///|
 fn kinded(value : Value, kind : SourceKind, label : String) -> KindedSource {
-  KindedSource::{ value, origin: Origin::new(kind, label), }
+  let site : &@config.OriginSite = KindedSite::{ kind, label, }
+    as &@config.OriginSite
+  KindedSource::{ value, site, }
 }
 
 ///|
@@ -220,8 +240,9 @@ test "origin_of follows the winning layer" {
     )
     .build()
   let origin = cfg.origin_of("db.port").unwrap()
-  assert_eq(origin.kind, SourceKind::Memory)
-  assert_eq(origin.label, "memory")
+  assert_eq(origin.kind(), SourceKind::Memory)
+  assert_eq(origin.label(), "memory")
+  assert_eq(origin.path().to_string(), "db.port")
   assert_true(cfg.origin_of("db.user") is None)
 }
 
@@ -242,7 +263,9 @@ test "origins lists every leaf" {
     .build()
   let origins = cfg.origins()
   assert_eq(origins.length(), 2)
-  let labels = origins.map(fn(pair) { "\{pair.0}=\{pair.1.label}" })
+  let labels = origins.map(fn(origin) {
+    "\{origin.path().to_string()}=\{origin.label()}"
+  })
   assert_true(labels.contains("db.host=file:config/app.json"))
   assert_true(labels.contains("debug=file:config/app.json"))
 }
@@ -324,20 +347,20 @@ test "Custom rule decides the merge" {
 }
 
 ///|
-/// 不覆写 `origin` 的来源：默认没有来源可报
+/// 不追踪来源的来源：`Layer::untracked`
 struct QuietSource {
   value : Value
 }
 
 ///|
-pub impl @config.Source for QuietSource with fn collect(self : QuietSource) -> Value {
-  self.value
+pub impl @config.Source for QuietSource with fn collect(self : QuietSource) -> @config.Layer {
+  @config.Layer::untracked(self.value)
 }
 
 ///|
 test "source without origin reports none" {
   let source = QuietSource::{ value: Value::table({ "a": Value::int(1L) }), }
-  assert_true(@config.Source::origin(source) is None)
+  assert_true(@config.Source::collect(source).origin is None)
   let cfg = Config::new().add(source).build()
   assert_true(cfg.origin_of("a") is None)
 }
@@ -345,16 +368,24 @@ test "source without origin reports none" {
 ///|
 /// 文本和字节来源都归到 `Custom`，标签说明是哪种
 test "StringSource and BytesSource report their labels" {
-  let text_origin = @config.Source::origin(
+  let text_layer = @config.Source::collect(
     StringSource::new("hello", EchoFormat::{ }),
-  ).unwrap()
-  assert_eq(text_origin.kind, SourceKind::Custom)
-  assert_eq(text_origin.label, "string")
-  let bytes_origin = @config.Source::origin(
+  )
+  let text_site = text_layer.origin.unwrap()
+  assert_eq(@config.OriginSite::kind(text_site), SourceKind::Custom)
+  assert_eq(
+    @config.OriginSite::describe(text_site, @config.KeyPath::root()),
+    "string",
+  )
+  let bytes_layer = @config.Source::collect(
     BytesSource::new(b"hi", EchoFormat::{ }),
-  ).unwrap()
-  assert_eq(bytes_origin.kind, SourceKind::Custom)
-  assert_eq(bytes_origin.label, "bytes")
+  )
+  let bytes_site = bytes_layer.origin.unwrap()
+  assert_eq(@config.OriginSite::kind(bytes_site), SourceKind::Custom)
+  assert_eq(
+    @config.OriginSite::describe(bytes_site, @config.KeyPath::root()),
+    "bytes",
+  )
 }
 
 ///|
@@ -373,9 +404,9 @@ test "origins treats arrays as leaves" {
     .build()
   let origins = cfg.origins()
   assert_eq(origins.length(), 1)
-  let (path, origin) = origins[0]
-  assert_eq(path, "hosts")
-  assert_eq(origin.label, "file:hosts.json")
+  let origin = origins[0]
+  assert_eq(origin.path().to_string(), "hosts")
+  assert_eq(origin.label(), "file:hosts.json")
 }
 
 ///|
@@ -403,9 +434,9 @@ test "table node origin follows the overriding layer" {
     )
     .build()
   let db = cfg.origin_of("db").unwrap()
-  assert_eq(db.label, "env:DB_PORT")
+  assert_eq(db.label(), "env:DB_PORT")
   let host = cfg.origin_of("db.host").unwrap()
-  assert_eq(host.label, "file:base.json")
+  assert_eq(host.label(), "file:base.json")
 }
 
 ///|

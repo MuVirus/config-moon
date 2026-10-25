@@ -9,20 +9,37 @@ pub struct StringSource {
 }
 
 ///|
+/// `StringSource` 的 site：只说明这层来自一段文本
+priv struct StringSite {}
+
+///|
+impl OriginSite for StringSite with fn kind(_ : StringSite) -> SourceKind {
+  SourceKind::Custom
+}
+
+///|
+impl OriginSite for StringSite with fn describe(_ : StringSite, _ : KeyPath) -> String {
+  "string"
+}
+
+///|
 /// 用一段文本和一个格式构造来源
 pub fn StringSource::new(text : String, format : &Format) -> StringSource {
   { text, format, }
 }
 
 ///|
-pub impl Source for StringSource with fn collect(self : StringSource) -> Value raise ConfigError {
-  self.format.decode(@utf8.encode(self.text))
+pub impl Source for StringSource with fn collect(self : StringSource) -> Layer raise ConfigError {
+  Layer::new(
+    self.format.decode(@utf8.encode(self.text)),
+    Some(StringSite::{ } as &OriginSite),
+  )
 }
 
 ///|
-pub impl Source for StringSource with fn origin(_ : StringSource) -> Origin? {
-  Some(Origin::new(SourceKind::Custom, "string"))
+pub impl Source for StringSource with fn kind(_ : StringSource) -> SourceKind {
+  SourceKind::Custom
 }
 
 ///|
-pub extend StringSource with Source::{collect, origin}
+pub extend StringSource with Source::{collect, kind}

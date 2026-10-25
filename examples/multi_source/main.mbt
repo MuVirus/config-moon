@@ -68,7 +68,7 @@ fn build_config() -> Config raise {
 ///|
 fn show(origin : Origin?) -> String {
   match origin {
-    Some(origin) => "\{origin.label}"
+    Some(origin) => "\{origin.label()}"
     None => "（没有来源）"
   }
 }
@@ -96,8 +96,8 @@ fn main raise {
   println("")
   println("== --print-config 会列出什么 ==")
   let origins = cfg.origins()
-  for pair in origins {
-    println("\{pair.0}  \{pair.1.label}")
+  for origin in origins {
+    println("\{origin.path().to_string()}  \{origin.label()}")
   }
 
   clear_env()

@@ -7,6 +7,23 @@ pub struct MemorySource {
 }
 
 ///|
+/// 内存来源的 site。
+///
+/// 单独一个空对象，不返回 `MemorySource` 自己：`MemorySource` 持有值树，
+/// 值树再指回它就成了环，而 native 默认的引用计数不回收环。
+priv struct MemorySite {}
+
+///|
+impl OriginSite for MemorySite with fn kind(_ : MemorySite) -> SourceKind {
+  SourceKind::Memory
+}
+
+///|
+impl OriginSite for MemorySite with fn describe(_ : MemorySite, _ : KeyPath) -> String {
+  "memory"
+}
+
+///|
 /// 用一个 `Value` 构造内存来源
 ///
 /// Example:
@@ -24,14 +41,14 @@ pub fn MemorySource::new(table : Value) -> MemorySource {
 }
 
 ///|
-pub impl Source for MemorySource with fn collect(self : MemorySource) -> Value {
-  self.table
+pub impl Source for MemorySource with fn collect(self : MemorySource) -> Layer {
+  Layer::new(self.table, Some(MemorySite::{ } as &OriginSite))
 }
 
 ///|
-pub impl Source for MemorySource with fn origin(_ : MemorySource) -> Origin? {
-  Some(Origin::new(SourceKind::Memory, "memory"))
+pub impl Source for MemorySource with fn kind(_ : MemorySource) -> SourceKind {
+  SourceKind::Memory
 }
 
 ///|
-pub extend MemorySource with Source::{collect, origin}
+pub extend MemorySource with Source::{collect, kind}

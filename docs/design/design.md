@@ -20,13 +20,18 @@ pub(all) enum ValueKind {
 ///| 配置值
 pub struct Value {
   kind : ValueKind
-  priv origin : Origin?    // 来自哪一层；构造器给 None，合并前补上
+  priv origin : &OriginSite?   // 来源对象；构造器给 None，合并前补上
 }
 ```
 
-`origin` 是私有字段，但来源可以自己标：`Value::with_origin(origin)` 给单个值挂来源，
-`EnvSource` / `CliSource` 用它把每个叶子标到具体变量名或参数名。`Config` 随后只补
-还没标过的节点，不覆盖已有来源。
+`origin` 只存一个指向 `OriginSite` 的引用，不存 label 字符串。`OriginSite` 是来源自己的对象，
+提供 `kind`、`describe(KeyPath)` 和可选的 `locator`；label 在 `Origin::label()` 里按需生成。
+
+`Source::collect` 返回 `Layer { value, origin }`，一层的值和它的 site 一起产出。`Config` 把 site
+递归补到整棵树；已经有 site 的节点不覆盖，组合来源可以先用 `Value::with_origin` 给子树标不同的 site。
+
+`KeyPath` 是结构化的键路径（`["db", "port"]`），点号串只在 `origin_of` / `get_path` 的 API
+边界解析一次；`origin_of` / `origins()` 返回 `Origin`，用 `path()` 拿层级，用 `label()` 拿展示文本。
 
 `Value::from_literal(StringView)` 把一段字面文本猜成配置值（`Bool` / `Int64` / `Float` /
 字符串），环境变量和命令行共用这一套，规则见 [sources.md](sources.md)。

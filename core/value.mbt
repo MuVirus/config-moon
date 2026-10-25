@@ -20,11 +20,11 @@ pub(all) enum ValueKind {
 ///
 /// 包一层壳而不是直接用 `ValueKind`，是为了以后加字段时不用改所有构造点。
 ///
-/// `origin` 记录这个值来自哪一层；构造器一律给 `None`，由 `Config` 在合并前补上。
+/// `origin` 指向这层来源的对象；构造器一律给 `None`，由 `Config` 在合并前补上。
 /// 它不参与相等比较，否则内容相同、来源不同的两个值会不相等。
 pub struct Value {
   kind : ValueKind
-  priv origin : Origin?
+  priv origin : &OriginSite?
 }
 
 ///|
@@ -78,9 +78,12 @@ pub fn Value::table(tbl : Map[String, Value]) -> Value {
 ///|
 /// 给一个值挂上来源。
 ///
-/// `Config` 合并前会给来源产出的树补来源；需要按 key 报不同来源的 Source
-/// （环境变量、命令行）用这个函数自己标叶子。
-pub fn Value::with_origin(self : Value, origin : Origin) -> Value {
+/// `Config` 合并前会给来源产出的整棵树补来源；组合来源（比如一个来源里读多个文件）
+/// 可以先用这个函数给子树标上各自的 site，`Config` 不会覆盖已有的。
+///
+/// 传进来的 site 不要持有这棵值树：native 默认的引用计数不回收环，
+/// `site → 值树 → &site` 会漏。
+pub fn Value::with_origin(self : Value, origin : &OriginSite) -> Value {
   { kind: self.kind, origin: Some(origin), }
 }
 

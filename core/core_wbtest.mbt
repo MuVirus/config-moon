@@ -113,6 +113,28 @@ test "getters merge lazily" {
 }
 
 ///|
+/// 白盒测试用的 site：固定标签，忽略路径
+struct TestSite {
+  kind : SourceKind
+  label : String
+}
+
+///|
+impl OriginSite for TestSite with fn kind(self : TestSite) -> SourceKind {
+  self.kind
+}
+
+///|
+impl OriginSite for TestSite with fn describe(self : TestSite, _ : KeyPath) -> String {
+  self.label
+}
+
+///|
+fn test_site(kind : SourceKind, label : String) -> &OriginSite {
+  TestSite::{ kind, label, } as &OriginSite
+}
+
+///|
 /// 树里每个节点（含表节点、数组节点）的路径和来源标签
 fn node_origins(
   value : Value,
@@ -120,7 +142,8 @@ fn node_origins(
   out : Array[(String, String)],
 ) -> Unit {
   match value.origin {
-    Some(origin) => out.push((prefix, origin.label))
+    Some(site) =>
+      out.push((prefix, OriginSite::describe(site, KeyPath::root())))
     None => ()
   }
   match value.kind {
@@ -145,11 +168,11 @@ test "merge keeps the overriding table origin" {
       "db": Value::table({ "host": Value::str("localhost") }),
       "keep": Value::int(1L),
     }),
-    Some(Origin::new(SourceKind::File, "file:base")),
+    Some(test_site(SourceKind::File, "file:base")),
   )
   let over = attach_origin(
     Value::table({ "db": Value::table({ "port": Value::int(2L) }) }),
-    Some(Origin::new(SourceKind::Env, "env:over")),
+    Some(test_site(SourceKind::Env, "env:over")),
   )
   let nodes = []
   node_origins(merge(base, over), "", nodes)
@@ -169,7 +192,7 @@ test "attach_origin marks table and array nodes" {
       "db": Value::table({ "host": Value::str("localhost") }),
       "hosts": Value::array([Value::str("a"), Value::str("b")]),
     }),
-    Some(Origin::new(SourceKind::Cli, "cli:--set")),
+    Some(test_site(SourceKind::Cli, "cli:--set")),
   )
   let nodes = []
   node_origins(value, "", nodes)
@@ -195,12 +218,12 @@ test "attach_origin without origin leaves the tree alone" {
 /// 节点自己带了来源就保留，只给没标的节点补
 test "attach_origin keeps origins already on the tree" {
   let value = Value::table({
-    "a": Value::int(1L).with_origin(Origin::new(SourceKind::Env, "env:A")),
+    "a": Value::int(1L).with_origin(test_site(SourceKind::Env, "env:A")),
     "b": Value::int(2L),
   })
   let nodes = []
   node_origins(
-    attach_origin(value, Some(Origin::new(SourceKind::Env, "env:APP"))),
+    attach_origin(value, Some(test_site(SourceKind::Env, "env:APP"))),
     "",
     nodes,
   )
@@ -208,4 +231,17 @@ test "attach_origin keeps origins already on the tree" {
   assert_true(labels.contains("a=env:A"))
   assert_true(labels.contains("b=env:APP"))
   assert_true(labels.contains("=env:APP"))
+}
+
+///|
+/// 路径按段拼，点号只在展示时出现
+test "KeyPath parses, extends and formats" {
+  let path = KeyPath::parse("db.port")
+  assert_eq(path.segments().to_owned(), ["db", "port"])
+  assert_eq(path.to_string(), "db.port")
+  let nested = path.add("user")
+  assert_eq(nested.to_string(), "db.port.user")
+  assert_eq(path.to_string(), "db.port")
+  assert_true(KeyPath::root().is_empty())
+  assert_false(KeyPath::parse("db").is_empty())
 }

@@ -72,10 +72,11 @@ test "CliSource reports a scalar shadowing a branch" {
 test "CliSource labels leaves without their values" {
   let cfg = config_of(["--db-password=secret", "--db.port=6543"])
   let password = cfg.origin_of("db.password").unwrap()
-  assert_eq(password.kind, SourceKind::Cli)
-  assert_eq(password.label, "cli:--db-password")
+  assert_eq(password.kind(), SourceKind::Cli)
+  assert_eq(password.label(), "cli:--db-password")
+  assert_eq(password.path().to_string(), "db.password")
   let port = cfg.origin_of("db.port").unwrap()
-  assert_eq(port.label, "cli:--db.port")
+  assert_eq(port.label(), "cli:--db.port")
 }
 
 ///|

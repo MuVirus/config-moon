@@ -13,10 +13,10 @@ import {
 pub struct CliSource {
   args : Array[String]
 }
-pub fn CliSource::collect(Self) -> @core.Value raise @core.ConfigError
+pub fn CliSource::collect(Self) -> @core.Layer raise @core.ConfigError
 pub fn CliSource::from_args(Array[String]) -> Self
+pub fn CliSource::kind(Self) -> @core.SourceKind
 pub fn CliSource::new() -> Self
-pub fn CliSource::origin(Self) -> @core.Origin?
 pub impl @core.Source for CliSource
 
 // Type aliases

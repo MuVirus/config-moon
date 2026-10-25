@@ -27,9 +27,9 @@ pub struct BytesSource {
   bytes : Bytes
   format : &Format
 }
-pub fn BytesSource::collect(Self) -> Value raise ConfigError
+pub fn BytesSource::collect(Self) -> Layer raise ConfigError
+pub fn BytesSource::kind(Self) -> SourceKind
 pub fn BytesSource::new(Bytes, &Format) -> Self
-pub fn BytesSource::origin(Self) -> Origin?
 pub impl Source for BytesSource
 
 pub struct Config {
@@ -45,17 +45,36 @@ pub fn Config::get_float(Self, String) -> Double raise ConfigError
 pub fn Config::get_int(Self, String) -> Int64 raise ConfigError
 pub fn Config::get_string(Self, String) -> String raise ConfigError
 pub fn Config::get_value(Self, String) -> Value raise ConfigError
+pub fn Config::get_value_at(Self, KeyPath) -> Value raise ConfigError
 pub fn Config::new() -> Self
+pub fn Config::origin_at(Self, KeyPath) -> Origin? raise ConfigError
 pub fn Config::origin_of(Self, String) -> Origin? raise ConfigError
-pub fn Config::origins(Self) -> Array[(String, Origin)] raise ConfigError
+pub fn Config::origins(Self) -> Array[Origin] raise ConfigError
 pub fn Config::with_rule(Self, MergeRule) -> Self
+
+pub struct KeyPath {
+  // private fields
+}
+pub fn KeyPath::add(Self, String) -> Self
+pub fn KeyPath::is_empty(Self) -> Bool
+pub fn KeyPath::parse(String) -> Self
+pub fn KeyPath::root() -> Self
+pub fn KeyPath::segments(Self) -> ArrayView[String]
+pub fn KeyPath::to_string(Self) -> String
+
+pub struct Layer {
+  value : Value
+  origin : &OriginSite?
+}
+pub fn Layer::new(Value, &OriginSite?) -> Self
+pub fn Layer::untracked(Value) -> Self
 
 pub struct MemorySource {
   table : Value
 }
-pub fn MemorySource::collect(Self) -> Value raise ConfigError
+pub fn MemorySource::collect(Self) -> Layer raise ConfigError
+pub fn MemorySource::kind(Self) -> SourceKind
 pub fn MemorySource::new(Value) -> Self
-pub fn MemorySource::origin(Self) -> Origin?
 pub impl Source for MemorySource
 
 pub(all) enum MergeRule {
@@ -65,12 +84,14 @@ pub(all) enum MergeRule {
   Custom((Value, Value) -> Value)
 }
 
-pub(all) struct Origin {
-  kind : SourceKind
-  label : String
-  locator : &Locator?
+pub struct Origin {
+  // private fields
 }
-pub fn Origin::new(SourceKind, String) -> Self
+pub fn Origin::kind(Self) -> SourceKind
+pub fn Origin::label(Self) -> String
+pub fn Origin::locator(Self) -> &Locator?
+pub fn Origin::path(Self) -> KeyPath
+pub fn Origin::site(Self) -> &OriginSite
 
 pub(all) enum SourceKind {
   Memory
@@ -87,9 +108,9 @@ pub struct StringSource {
   text : String
   format : &Format
 }
-pub fn StringSource::collect(Self) -> Value raise ConfigError
+pub fn StringSource::collect(Self) -> Layer raise ConfigError
+pub fn StringSource::kind(Self) -> SourceKind
 pub fn StringSource::new(String, &Format) -> Self
-pub fn StringSource::origin(Self) -> Origin?
 pub impl Source for StringSource
 
 pub struct Value {
@@ -102,6 +123,7 @@ pub fn Value::bytes(Bytes) -> Self
 pub fn Value::equal(Self, Self) -> Bool
 pub fn Value::float(Double) -> Self
 pub fn Value::from_literal(StringView) -> Self raise ConfigError
+pub fn Value::get_at(Self, KeyPath) -> Self raise ConfigError
 pub fn Value::get_path(Self, String) -> Self raise ConfigError
 pub fn Value::int(Int64) -> Self
 pub fn Value::not_equal(Self, Self) -> Bool
@@ -109,7 +131,7 @@ pub fn Value::null() -> Self
 pub fn Value::str(String) -> Self
 pub fn Value::table(Map[String, Self]) -> Self
 pub fn Value::to_repr(Self) -> @debug.Repr
-pub fn Value::with_origin(Self, Origin) -> Self
+pub fn Value::with_origin(Self, &OriginSite) -> Self
 pub impl Eq for Value
 pub impl @debug.Debug for Value
 
@@ -139,7 +161,13 @@ pub(open) trait Locator {
   fn read(Self) -> Bytes raise ConfigError
 }
 
+pub(open) trait OriginSite {
+  fn kind(Self) -> SourceKind
+  fn describe(Self, KeyPath) -> String
+  fn locator(Self) -> &Locator? = _
+}
+
 pub(open) trait Source {
-  fn collect(Self) -> Value raise ConfigError
-  fn origin(Self) -> Origin? = _
+  fn collect(Self) -> Layer raise ConfigError
+  fn kind(Self) -> SourceKind = _
 }

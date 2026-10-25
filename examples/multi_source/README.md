@@ -39,12 +39,12 @@ moon run examples/multi_source -- --log-level=debug
 
 每个值都能回答「谁给的」：
 
-- `origin_of("db.host")` → 文件来源，标签是 `file:examples/multi_source/config/app.json`；它带 `locator`，可以重新读这个文件
+- `origin_of("db.host")` → 文件来源，标签是 `file:examples/multi_source/config/app.json`；`origin.locator()` 可以重新读这个文件
 - `origin_of("db.port")` → 环境变量来源，标签是 `env:APP_DB_PORT`
 - `origin_of("log.level")` → 命令行来源，标签是 `cli:--log-level`
 - `origin_of("feature.debug")` → 内存默认值
 
-`origin_of` 返回的 `kind` 可以直接模式匹配，用来分支；`label` 只用来展示和写错误消息，不反解析。
+`origin_of` 返回的 `kind()` 可以直接模式匹配，用来分支；`path()` 给结构化的层级路径；`label()` 只用来展示和写错误消息，按需生成，不反解析。每个值只存一个指向来源对象的引用，不存 label 字符串。
 
 `origins()` 能一次列出所有叶子路径和来源，适合做 `--print-config` 这类诊断命令：
 

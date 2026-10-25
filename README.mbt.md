@@ -25,7 +25,7 @@ MoonBit 原生配置库
 - **多层来源**：内存默认值、配置文件、环境变量、命令行参数按加入顺序叠加，后加的覆盖先加的
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
-- **来源可追**：`origin_of` / `origins()` 回答每个值最终来自哪一层
+- **来源可追**：`origin_of` / `origins()` 给出源对象和结构化层级路径，展示用的 label 按需生成
 
 ---
 
@@ -189,12 +189,15 @@ let cfg = Config::new()
   .build()
 
 let origin = cfg.origin_of("db.port").unwrap()
-origin.kind    // SourceKind::Memory
-origin.label   // "memory"
-cfg.origins()  // [("db.port", Origin { ... })]，只列叶子路径
+origin.kind()           // SourceKind::Memory
+origin.label()          // "memory"
+origin.path().to_string() // "db.port"
+cfg.origins()           // [Origin { ... }]，只列叶子路径
 ```
 
-`origin.kind` 可以直接模式匹配，`label` 只用于展示，不反解析。查询在没 `build()` 时会现场合并，所以带 `raise`。
+`origin.kind()` 可以直接模式匹配；`origin.path()` 给结构化的 `KeyPath`，需要逐段判断时不用拆字符串；
+`label()` 只用于展示，按需生成，不反解析。要重新读原始内容时用 `origin.locator()`。
+查询在没 `build()` 时会现场合并，所以带 `raise`。
 
 ### 提取到结构体
 

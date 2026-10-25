@@ -15,10 +15,36 @@
 /// `db` 已经是整数，没法再放 `db.port`，报 `ParseError` 并点名两个变量；
 /// 两个变量只差大小写时同样报错。
 ///
-/// 每个叶子都自带 `Origin`：`kind` 是 `Env`，标签是 `env:APP_DB_PORT`，
-/// 所以 `origin_of("db.port")` 能指出具体是哪个变量。
+/// 整层共用一个 site：`kind` 是 `Env`，`describe` 按路径查回具体变量名，
+/// 所以 `origin_of("db.port")` 能指出是 `APP_DB_PORT`，而 `Value` 上不存这个字符串。
 pub struct EnvSource {
   prefix : String
+}
+
+///|
+/// 环境变量层的 site：保留前缀和「路径 → 变量名」的索引。
+///
+/// 索引来自这次真正读到的变量，不是格式化好的 label；`describe` 时才拼成
+/// `env:APP_DB_PORT`。表节点在索引里没有条目，退回 `env:APP_*`。
+priv struct EnvSite {
+  prefix : String
+  names : Map[String, String]
+}
+
+///|
+impl @config.OriginSite for EnvSite with fn kind(_ : EnvSite) -> @config.SourceKind {
+  @config.SourceKind::Env
+}
+
+///|
+impl @config.OriginSite for EnvSite with fn describe(
+  self : EnvSite,
+  path : @config.KeyPath,
+) -> String {
+  match self.names.get(path.to_string()) {
+    Some(name) => "env:\{name}"
+    None => "env:\{self.prefix}*"
+  }
 }
 
 ///|
@@ -47,7 +73,7 @@ pub fn EnvSource::all() -> EnvSource {
 }
 
 ///|
-pub impl @config.Source for EnvSource with fn collect(self : EnvSource) -> @config.Value raise @config.ConfigError {
+pub impl @config.Source for EnvSource with fn collect(self : EnvSource) -> @config.Layer raise @config.ConfigError {
   let vars = @env.get_env_vars()
   let names : Array[String] = []
   for name, _ in vars {
@@ -74,28 +100,21 @@ pub impl @config.Source for EnvSource with fn collect(self : EnvSource) -> @conf
         )
       error => raise error
     }
-    let origin = @config.Origin::{
-      kind: @config.SourceKind::Env,
-      label: "env:\{name}",
-      locator: None,
-    }
-    assign(root, seen, path, name, value.with_origin(origin))
+    assign(root, seen, path, name, value)
   }
-  @config.Value::table(root)
+  @config.Layer::new(
+    @config.Value::table(root),
+    Some(EnvSite::{ prefix: self.prefix, names: seen, } as &@config.OriginSite),
+  )
 }
 
 ///|
-/// 整层来源报 `Env`；叶子有自己的标签，这里只是兜底
-pub impl @config.Source for EnvSource with fn origin(self : EnvSource) -> @config.Origin? {
-  Some(@config.Origin::{
-    kind: @config.SourceKind::Env,
-    label: "env:\{self.prefix}*",
-    locator: None,
-  })
+pub impl @config.Source for EnvSource with fn kind(_ : EnvSource) -> @config.SourceKind {
+  @config.SourceKind::Env
 }
 
 ///|
-pub extend EnvSource with @config.Source::{collect, origin}
+pub extend EnvSource with @config.Source::{collect, kind}
 
 ///|
 /// 变量名 → 层级路径：去掉前缀后按 `_` 和 `.` 拆层，统一转小写。

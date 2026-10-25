@@ -59,10 +59,17 @@
 
 ## 6. 来源追踪与合并规则
 
-> **2026-10 实现时定的细节**
+> **2026-10 定稿：存来源对象，不存 label 字符串**
 >
-> - `Origin` 挂在 `Value` 的每个节点上，`Value` 的 `Eq` / `Debug` 都只看 `kind`。否则内容相同、来源不同的值不相等，合并测试会莫名其妙地失败。
-> - `Value::with_origin` 公开，按 key 标来源的 Source 用它；`attach_origin` 只补 `None`，不覆盖已有来源。
+> - `Value.origin` 的类型是 `&OriginSite?`：每个节点只多一个引用，不存 label。`Value` 的 `Eq` / `Debug` 都只看 `kind`，否则内容相同、来源不同的值不相等。
+> - `OriginSite` 是 core 的 `pub(open) trait`：`kind`、`describe(KeyPath)`、`locator`（默认 None）。`label` 只在 `Origin::label()` 里按需生成，不反解析。
+> - `KeyPath` 是结构化的段数组（`["db", "port"]`），点号串只在 `origin_of` / `get_path` 的 API 边界解析一次；`origins()` 遍历时直接拼路径。
+> - `Source::collect` 返回 `Layer { value, origin }`，一层的值和它的 site 一起产出；`Source::kind` 给 `ByKind` 排序用，不用先 `collect`。
+> - 环境变量、命令行整层共用一个 site，site 里存「路径 → 原始变量名/参数名」的索引；`describe(path)` 查表。`Value` 不再按叶子存字符串。
+> - `MemorySource` 返回独立的 `MemorySite`，不返回自己：native 默认的引用计数（`MOONBIT_TRIAL_DELETION=0`）不回收环，`MemorySource → Value → &MemorySource` 会漏。JS / wasm-gc 的 tracing GC 不受影响。
+> - `Value::with_origin(&OriginSite)` 留给组合来源（一个来源里读多个文件），按子树标不同的 site；`attach_origin` 只补 `None`，不覆盖已有的。
+> - `&T` 在 MoonBit 里是 trait object，只能用于 trait，不是 Rust 的借用：没有生命周期检查，trait object 会被 GC/RC 保活。`&Path` 不成立，`Path` 是 struct。
+> - `SourceId` 枚举方案没有采用：每个分支仍要存 String，Env/Cli 仍要按路径查名字；trait object 的 site 同时解决这两件事。
 > - `ConfigError::MergeConflict` 目前没有代码路径会抛：三种合并规则都是覆盖，不做类型冲突判定。变体先保留，给以后加校验时用。
 > - `StringSource` / `BytesSource` 归到 `SourceKind::Custom`，标签分别是 `string` / `bytes`。它们既不是文件，也不是环境变量；给 `ByKind` 一个明确的档位比硬塞进 `Memory` 更清楚。
 > - `ByKind(order)` 的数组按优先级从高到低写；没列出的 kind 排在最后。实现上按优先级**从低到高**处理来源，再用 `LastWins` 合并——同一档内后加的仍然赢。
@@ -75,9 +82,10 @@
 > **2026-10 实现时定的细节**
 >
 > - 新增 `ConfigError::IoError(String)`：读不到外部数据（文件、环境变量）和「读到了但解析失败」是两回事，混进 `ParseError` 会让用户去查格式。消息以「读取失败：」开头，带路径或变量名。
-> - `FileSource` 的路径就是 `String`，和 `moonbitlang/x/fs` 的接口一致；`Locator` 直接实现在 `FileSource` 自己身上，`origin_of` 拿到的 `locator` 调 `read()` 就能重新读出同一份字节。没有另外拍一个平台 `Path` 类型——那会把平台类型带进 core。
+> - `FileSource` 的路径就是 `String`，和 `moonbitlang/x/fs` 的接口一致；`FileSource` 同时实现 `OriginSite` 和 `Locator`：`describe` 给文件路径，`locator` 就是它自己，`origin_of` 拿到的 `locator` 调 `read()` 就能重新读出同一份字节。没有另外拍一个平台 `Path` 类型——那会把平台类型带进 core。
+> - `@path` 技术上能进 core（试过 `moon test` 和 `js` / `wasm-gc` 都能过），但 `x/path` 自带 native stub 和 platform cfg，会把平台分派拖进 core；`Path` 也只是 `String` 的包装，`@fs` 只收 `String`。所以 core 里保持 `String`；`FileSource` 以后真要做 `join` / `normalize` 再在包内用 `Path`。
 > - 环境变量和命令行都不是「字节 + 格式」，类型推断没法交给 `Format`。推断规则放进 core 的 `Value::from_literal`，两个包共用一份：`true` / `false` → `Bool`，整数 → `Int64`（超出范围报错），带小数点或指数 → `Float`，其余 → 字符串。dotenv 的推断没并过来，因为它要按行号报错，合并会丢掉行号。
-> - `Config::attach_origin` 改成「已经有 origin 的节点不动」。环境变量、命令行的每个叶子在 `collect()` 里就标好了具体变量名/参数名，这一层不能被子来源标签盖掉；表节点仍由 `Config` 补。
+> - `Config::attach_origin` 只补没有 site 的节点。`EnvSite` / `CliSite` 在 `collect()` 里建好「路径 → 原始名字」索引，整层共用一个 site；表节点也落在这个 site 上，`describe` 查不到时退回 `env:前缀*` / `cli:args`。
 > - `EnvSource` 只读指定前缀；`_` 和 `.` 都算层级，名字转小写。标量占了层级名、或两个变量落到同一个路径时报 `ParseError` 并点名两个变量——按 Map 遍历顺序猜赢家会让结果随平台变。变量名排序后才处理，保证同一份环境每次结果一致。
 > - 环境变量的大小写冲突在 Windows 上测不出来：系统本身不区分大小写，`set_env_var` 会直接覆盖同名变量。碰撞检测仍在代码里，用白盒测试直接喂 `assign` 验证。
 > - `CliSource` 只认长选项，位置参数和 `-x` 一律忽略——命令行上还有程序自己的参数。`--` 之后全部当位置参数。同一个键写两次后写的赢，但标量和层级互相挡路时（`--a=1 --a.b=2`、`--a.b=1 --a=2`）都报错，不静默丢值。

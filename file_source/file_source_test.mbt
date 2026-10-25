@@ -52,9 +52,9 @@ test "FileSource reports a file origin with a locator" {
   @fs.write_string_to_file(path, "hello")
   let cfg = Config::new().add(FileSource::new(path, TextFormat::{ })).build()
   let origin = cfg.origin_of("text").unwrap()
-  assert_eq(origin.kind, SourceKind::File)
-  assert_eq(origin.label, "file:\{path}")
-  match origin.locator {
+  assert_eq(origin.kind(), SourceKind::File)
+  assert_eq(origin.label(), "file:\{path}")
+  match origin.locator() {
     Some(locator) => {
       let bytes = @config.Locator::read(locator) catch { _ => b"" }
       let text = @utf8.decode(bytes) catch { _ => "" }

@@ -70,10 +70,11 @@ test "EnvSource labels leaves with the variable name" {
   ])
   let cfg = Config::new().add(EnvSource::new("MOONFIG_ORIGIN_")).build()
   let port = cfg.origin_of("db.port").unwrap()
-  assert_eq(port.kind, SourceKind::Env)
-  assert_eq(port.label, "env:MOONFIG_ORIGIN_DB_PORT")
+  assert_eq(port.kind(), SourceKind::Env)
+  assert_eq(port.label(), "env:MOONFIG_ORIGIN_DB_PORT")
+  assert_eq(port.path().to_string(), "db.port")
   let host = cfg.origin_of("db.host").unwrap()
-  assert_eq(host.label, "env:MOONFIG_ORIGIN_DB_HOST")
+  assert_eq(host.label(), "env:MOONFIG_ORIGIN_DB_HOST")
   clear_vars(["MOONFIG_ORIGIN_DB_PORT", "MOONFIG_ORIGIN_DB_HOST"])
 }
 
