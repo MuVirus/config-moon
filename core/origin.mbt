@@ -20,8 +20,7 @@ pub extend SourceKind with @debug.Debug::{to_repr}
 ///|
 /// 能反推出原始字节的对象。
 ///
-/// `FileSource` 用平台自己的路径或 URL 实现它，core 只看到 `read()`。
-/// 现在还没有实现：只有内存来源时没有可反推的对象，等 `FileSource` 落地再填。
+/// `FileSource` 用字符串路径实现它，core 只看到 `read()`。
 pub(open) trait Locator {
   fn read(Self) -> Bytes raise ConfigError
 }

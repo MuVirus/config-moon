@@ -28,7 +28,7 @@ pub(open) trait Source {
 没有 `JsonSource`、`TomlSource` 这类类型。它们只是「字符串 + 某种格式」，写成 `StringSource` 加 `JsonFormat` 就够了；每种格式再包一个 Source，只会让「格式」和「从哪读」继续混在一起。
 
 `EnvSource`、`CliSource` 不用 `Format`：它们的输入是键值对和 argv，不是一段文本或字节。
-它们和 `dotenv_format` 一样要猜类型，但猜法必须跨包共用，所以核心提供一个自由函数：
+它们和 `dotenv_format` 一样要猜类型，但猜法必须跨包共用，所以核心提供 `Value::from_literal`：
 
 ```moonbit
 pub fn Value::from_literal(StringView) -> Value raise ConfigError
@@ -86,7 +86,7 @@ pub(open) trait Locator {
 }
 ```
 
-`Value` 加一个私有字段 `origin : Origin?`，构造器一律给 `None`。`Source` 报自己的来源：
+`Value` 加一个私有字段 `origin : Origin?`，构造器给 `None`。`Source` 报自己的来源：
 
 ```moonbit
 pub(open) trait Source {
@@ -97,7 +97,7 @@ pub(open) trait Source {
 
 `Format` 不打标——同一个 `JsonFormat` 可能解析内存字符串，也可能解析文件，它不知道位置。
 
-`Config::merged` 在每次 `collect()` 后递归给整棵树写 origin，再 merge；`build` 清掉 `sources` 也不丢信息。合并时 origin 跟着赢家走，表节点取覆盖方的 origin。已经有 origin 的节点不会被覆盖——环境变量、命令行就是先给每个叶子标好来源，再由 `Config` 补剩下的节点。
+`Config::merged` 在每次 `collect()` 后递归给整棵树写 origin，再 merge；`build` 清掉 `sources` 也不丢信息。合并时 origin 跟着赢家走，表节点取覆盖方的 origin。已经有 origin 的节点不会被覆盖——环境变量、命令行先用 `Value::with_origin` 给每个叶子标好来源，再由 `Config` 补剩下的节点。
 
 ### 展示与反推
 
@@ -109,9 +109,9 @@ pub(open) trait Source {
 两个查询在没 `build()` 时会现场合并，所以保留 `raise`；路径不存在时 `origin_of` 给 `None`。
 `StringSource` / `BytesSource` 报 `SourceKind::Custom`，标签是 `string` / `bytes`。
 
-`FileSource` 用平台自己的路径或 URL 实现 `Locator`，core 只看到 `read()`。web 上的文件也能反推，core 不需要知道文件系统。
+`FileSource` 自己实现 `Locator`，core 只看到 `read()`，不需要知道文件系统。
 
-MoonBit 没有 trait object 的 downcast，所以拿不回具体的 `Path` 类型；能做的事必须定义在 `Locator` 上。想直接操作 `Path`，只能把平台类型放进 core 或让 `Value` 泛型化，两者都不做。
+MoonBit 没有 trait object 的 downcast，所以拿不回具体的路径类型；能做的事必须定义在 `Locator` 上。想直接操作路径，只能把平台类型放进 core 或让 `Value` 泛型化，两者都不做。
 
 `FileSource` 的路径就是 `String`，和 `moonbitlang/x/fs` 的接口一致，所以 `locator` 直接放 `FileSource` 自己：
 `origin_of(...)` 拿到的 `locator` 调一次 `read()` 就重新读出同一份字节。读文件失败报 `ConfigError::IoError`，

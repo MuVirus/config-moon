@@ -62,6 +62,8 @@
 > **2026-10 实现时定的细节**
 >
 > - `Origin` 挂在 `Value` 的每个节点上，`Value` 的 `Eq` / `Debug` 都只看 `kind`。否则内容相同、来源不同的值不相等，合并测试会莫名其妙地失败。
+> - `Value::with_origin` 公开，按 key 标来源的 Source 用它；`attach_origin` 只补 `None`，不覆盖已有来源。
+> - `ConfigError::MergeConflict` 目前没有代码路径会抛：三种合并规则都是覆盖，不做类型冲突判定。变体先保留，给以后加校验时用。
 > - `StringSource` / `BytesSource` 归到 `SourceKind::Custom`，标签分别是 `string` / `bytes`。它们既不是文件，也不是环境变量；给 `ByKind` 一个明确的档位比硬塞进 `Memory` 更清楚。
 > - `ByKind(order)` 的数组按优先级从高到低写；没列出的 kind 排在最后。实现上按优先级**从低到高**处理来源，再用 `LastWins` 合并——同一档内后加的仍然赢。
 > - `Custom(fn)` 收到的是「已经合好的部分」和「下一层」，返回新的部分。来源已经挂在值上，自定义函数要自己负责保留。

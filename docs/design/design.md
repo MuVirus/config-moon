@@ -6,7 +6,7 @@
 
 ```moonbit
 ///| 配置值在内存里的形状
-pub enum ValueKind {
+pub(all) enum ValueKind {
   Null
   Bool(Bool)
   Int(Int64)              // 所有整数统一用 Int64
@@ -20,9 +20,16 @@ pub enum ValueKind {
 ///| 配置值
 pub struct Value {
   kind : ValueKind
-  priv origin : Origin?    // 来自哪一层；构造时一律 None，合并前补上
+  priv origin : Origin?    // 来自哪一层；构造器给 None，合并前补上
 }
 ```
+
+`origin` 是私有字段，但来源可以自己标：`Value::with_origin(origin)` 给单个值挂来源，
+`EnvSource` / `CliSource` 用它把每个叶子标到具体变量名或参数名。`Config` 随后只补
+还没标过的节点，不覆盖已有来源。
+
+`Value::from_literal(StringView)` 把一段字面文本猜成配置值（`Bool` / `Int64` / `Float` /
+字符串），环境变量和命令行共用这一套，规则见 [sources.md](sources.md)。
 
 ## 2. 合并
 
@@ -50,6 +57,7 @@ let cfg = Config::new()
 
 cfg.get_string("db.host")        // String
 cfg.get_int("db.port")           // Int64
+cfg.get_float("ratio")           // Double
 cfg.get_bool("debug")            // Bool
 cfg.get_bytes("cert")            // Bytes
 ```
@@ -60,15 +68,19 @@ cfg.get_bytes("cert")            // Bytes
 ## 4. 错误
 
 ```moonbit
-pub suberror ConfigError {
+pub(all) suberror ConfigError {
   MissingKey(String)                      // 路径没被任何 Source 提供
   TypeMismatch(String, String, String)    // 路径、想要、实际
-  ParseError(String)                      // 文本解析失败（包住 @json.JsonDecodeError）
-  MergeConflict(String, String, String)   // 类型冲突：路径、两侧类型
+  ParseError(String)                      // 解析失败：格式、类型推断、整数溢出……
+  IoError(String)                         // 读取外部数据失败（文件、环境变量……）
+  MergeConflict(String, String, String)   // 类型冲突：路径、两侧类型；当前没有代码路径会抛
 }
 ```
 
 唯一体验标准：用户看到错误，能立刻知道**哪个键、期望什么、实际什么**。
+
+`IoError` 和 `ParseError` 分开：读不到和读到了但解析不了是两回事，混在一起会让用户去查格式。
+`MergeConflict` 是预留变体——现在的合并规则都是覆盖，不做类型冲突判定。
 
 ## 设计文档
 
