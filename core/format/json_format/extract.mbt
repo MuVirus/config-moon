@@ -154,6 +154,20 @@ pub fn[T : @json.FromJson] extract_from(
 }
 
 ///|
+/// 取配置里某个路径的值，提取成结构体，再跑结构体自己的 `Validate`。
+///
+/// 未知键不在这条路上：`derive(FromJson)` 会忽略结构体里没有的字段，
+/// 要查未知键请用 `Rule::allowed_keys` 按键校验。
+pub fn[T : @json.FromJson + @config.Validate] extract_validated_from(
+  cfg : @config.Config,
+  path : String,
+) -> T raise @config.ConfigError {
+  let value : T = extract_from(cfg, path)
+  @config.Validate::validate(value, @config.KeyPath::parse(path))
+  value
+}
+
+///|
 /// 提取失败时把 core 的错误翻成库自己的错误：
 /// 键名、期望类型、实际类型，和 `get_*` 一个口径。
 fn[T : @json.FromJson] extract_at(

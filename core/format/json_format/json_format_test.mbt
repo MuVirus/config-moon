@@ -10,7 +10,12 @@ using @config {
 }
 
 ///|
-using @json_format {type JsonFormat, extract, extract_from}
+using @json_format {
+  type JsonFormat,
+  extract,
+  extract_from,
+  extract_validated_from,
+}
 
 ///|
 /// 测试里省掉重复的 `StringSource::new(..., JsonFormat::new())`
@@ -27,6 +32,15 @@ struct DbCfg {
 
 ///|
 pub extend DbCfg with @json.FromJson::{from_json}
+
+///|
+/// 结构体自己的约束：端口必须落在合法范围内
+impl @config.Validate for DbCfg with fn validate(
+  self : DbCfg,
+  prefix : @config.KeyPath,
+) -> Unit raise @config.ConfigError {
+  @config.check_int_range(prefix.add("port"), self.port.to_int64(), 1L, 65535L)
+}
 
 ///|
 /// 64 位字段写 `Int64Text`：core 的 `Int64` 只吃 JSON 字符串，和本库的整数映射对不上
@@ -177,4 +191,32 @@ test "json and memory sources combine" {
     .build()
   assert_eq(cfg.get_string("db.host"), "localhost")
   assert_eq(cfg.get_int("db.port"), 6543L)
+}
+
+///|
+/// 提取后立刻跑结构体自己的 `Validate`，路径拼上提取时的前缀
+test "extract_validated_from reports the constraint" {
+  let cfg = Config::new()
+    .add(json("{\"db\": {\"host\": \"localhost\", \"port\": 70000}}"))
+    .build()
+  let message = try {
+    let _ : DbCfg = extract_validated_from(cfg, "db")
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    message, "配置项 db.port 不符合约束：期望 1..65535，实际 70000",
+  )
+}
+
+///|
+/// 符合约束时原样返回提取结果
+test "extract_validated_from returns the struct" {
+  let cfg = Config::new()
+    .add(json("{\"db\": {\"host\": \"localhost\", \"port\": 5432}}"))
+    .build()
+  let db : DbCfg = extract_validated_from(cfg, "db")
+  assert_eq(db.host, "localhost")
+  assert_eq(db.port, 5432)
 }

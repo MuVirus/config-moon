@@ -16,6 +16,9 @@ pub fn KeyPath::root() -> KeyPath {
 ///|
 /// 把点号路径拆成段：`"db.port"` → `["db", "port"]`
 pub fn KeyPath::parse(text : String) -> KeyPath {
+  if text == "" {
+    return KeyPath::root()
+  }
   { segments: text.split(".").map(fn(part) { part.to_owned() }).collect(), }
 }
 

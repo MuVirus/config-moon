@@ -1,6 +1,6 @@
 # moonfig 设计
 
-主线是「多 Source → 统一表示 → 分层合并 → 取值 / 提取到结构体」，先做能跑通的最小闭环。
+主线是「多 Source → 统一表示 → 分层合并 → 取值 / 提取到结构体 / 校验」，先做能跑通的最小闭环。
 
 ## 1. 核心类型
 
@@ -79,6 +79,8 @@ pub(all) suberror ConfigError {
   ParseError(String)                      // 解析失败：格式、类型推断、整数溢出……
   IoError(String)                         // 读取外部数据失败（文件、环境变量……）
   MergeConflict(String, String, String)   // 类型冲突：路径、两侧类型；当前没有代码路径会抛
+  InvalidValue(String, String, String)    // 校验失败：路径、期望约束、实际
+  UnknownKey(String)                      // 校验时发现不在允许列表里的键
 }
 ```
 
@@ -91,4 +93,5 @@ pub(all) suberror ConfigError {
 
 - [sources.md](sources.md) —— Source / Format 模型、package 划分与来源追踪
 - [extract.md](extract.md) —— 提取到结构体、整数映射、错误消息
+- [validate.md](validate.md) —— 校验：按键规则表、结构体 `Validate`、未知键
 - [../decisions/decisions.md](../decisions/decisions.md) —— 决策记录

@@ -8,6 +8,8 @@ pub(all) suberror ConfigError {
   ParseError(String) // 文本解析失败（包住 @json 的错误）
   IoError(String) // 读取外部数据失败（文件、环境变量……）
   MergeConflict(String, String, String) // 类型冲突：路径、两侧类型
+  InvalidValue(String, String, String) // 校验失败：路径、期望约束、实际
+  UnknownKey(String) // 校验时发现不在允许列表里的键
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -23,6 +25,10 @@ pub impl Show for ConfigError with fn output(self, logger) {
     IoError(message) => logger <+ "读取失败：\{message}"
     MergeConflict(path, left, right) =>
       logger <+ "配置项 \{path} 合并冲突：\{left} 与 \{right}"
+    InvalidValue(path, expected, actual) =>
+      logger <+
+        "配置项 \{path} 不符合约束：期望 \{expected}，实际 \{actual}"
+    UnknownKey(path) => logger <+ "配置项 \{path} 不在允许的键里"
   }
 }
 

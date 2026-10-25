@@ -6,6 +6,9 @@ import {
 }
 
 // Values
+pub fn check_int_range(KeyPath, Int64, Int64, Int64) -> Unit raise ConfigError
+
+pub fn check_string_len(KeyPath, String, Int32, Int32) -> Unit raise ConfigError
 
 // Errors
 pub(all) suberror ConfigError {
@@ -14,6 +17,8 @@ pub(all) suberror ConfigError {
   ParseError(String)
   IoError(String)
   MergeConflict(String, String, String)
+  InvalidValue(String, String, String)
+  UnknownKey(String)
 } derive(Eq, @debug.Debug)
 pub fn ConfigError::equal(Self, Self) -> Bool
 pub fn ConfigError::not_equal(Self, Self) -> Bool
@@ -50,6 +55,8 @@ pub fn Config::new() -> Self
 pub fn Config::origin_at(Self, KeyPath) -> Origin? raise ConfigError
 pub fn Config::origin_of(Self, String) -> Origin? raise ConfigError
 pub fn Config::origins(Self) -> Array[Origin] raise ConfigError
+pub fn Config::validate(Self, Array[Rule]) -> Unit raise ConfigError
+pub fn Config::validate_all(Self, Array[Rule]) -> Array[ConfigError] raise ConfigError
 pub fn Config::with_rule(Self, MergeRule) -> Self
 
 pub struct KeyPath {
@@ -92,6 +99,15 @@ pub fn Origin::label(Self) -> String
 pub fn Origin::locator(Self) -> &Locator?
 pub fn Origin::path(Self) -> KeyPath
 pub fn Origin::site(Self) -> &OriginSite
+
+pub struct Rule {
+  // private fields
+}
+pub fn Rule::allowed_keys(String, Array[String]) -> Self
+pub fn Rule::custom(String, String, (Value) -> String?) -> Self
+pub fn Rule::int_range(String, Int64, Int64) -> Self
+pub fn Rule::one_of(String, Array[String]) -> Self
+pub fn Rule::string_len(String, Int32, Int32) -> Self
 
 pub(all) enum SourceKind {
   Memory
@@ -170,4 +186,8 @@ pub(open) trait OriginSite {
 pub(open) trait Source {
   fn collect(Self) -> Layer raise ConfigError
   fn kind(Self) -> SourceKind = _
+}
+
+pub(open) trait Validate {
+  fn validate(Self, KeyPath) -> Unit raise ConfigError
 }

@@ -98,3 +98,20 @@
 > `String::compare("z", "aa") < 0` 为真；`["db.host", "log.level", "feature.debug"].sort()` 得到
 > 按长度递增的顺序，不是字母序。影响：任何「按名字排序」的展示都不能直接依赖 `sort()`，
 > 需要字典序时得自己逐字符比较。环境变量的处理顺序只用它保证「确定」，不当作展示顺序。
+
+## 9. 校验
+
+> **2026-10 实现时定的细节**
+>
+> - 两条路：按键用 `Rule` 规则表，结构体用 `Validate` trait。两者共用 `ConfigError` 和
+>   `check_int_range` / `check_string_len`，不各写一套。
+> - `validate` 遇错即停，和 `get_*` 一致；`validate_all` 返回 `Array[ConfigError]`，顺序和规则表一致。
+> - 必填项不单独做规则：任何规则取不到路径都会报 `MissingKey`，`get_*` / `extract_from` 本身也会报。
+> - 未知键只能按键查。`derive(FromJson)` 忽略结构体里没有的字段，也不提供钩子，结构体不知道外面多了什么；
+>   `Rule::allowed_keys` 不写就不查，等于开关默认关。递归 strict schema 暂不做。
+> - 新增 `InvalidValue(path, 期望约束, 实际)` 和 `UnknownKey(path)`。`actual` 由规则给：类型不符写形状名，
+>   长度不符写长度，自定义规则自己决定。密码类字段由规则负责脱敏，错误类型不打印原值。
+> - 不给 `get_*` 加范围变体，也不靠 `derive(FromJson)` 自动校验：前者让 API 膨胀，后者拿不到字段名、
+>   约束和未知键。校验是显式的一步，调用方自己决定什么时候跑、失败后怎么处理。
+> - `Rule` 内部存 `(KeyPath, Value) -> ConfigError?`：组合规则（`allowed_keys`）需要在路径下面再拼一段，
+>   只返回一个字符串不够定位到具体的键。`Rule::custom` 仍然只让用户返回 `String?`。

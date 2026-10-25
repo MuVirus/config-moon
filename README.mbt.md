@@ -26,6 +26,7 @@ MoonBit 原生配置库
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
 - **来源可追**：`origin_of` / `origins()` 给出源对象和结构化层级路径，展示用的 label 按需生成
+- **可校验**：按键用规则表，结构体用 `Validate`，启动时一次暴露缺失、越界和未知键
 
 ---
 
@@ -227,6 +228,34 @@ let order : OrderCfg = extract_from(cfg, "order")
 order.id.to_int64()   // 9007199254740993，超出 Double 精确范围也不丢
 ```
 
+### 校验
+
+配置读进来先验一遍，问题在启动时暴露。按键用规则表：
+
+```moonbit nocheck
+using @config {type Rule}
+
+cfg.validate([
+  Rule::int_range("db.port", 1L, 65535L),
+  Rule::one_of("log.level", ["debug", "info", "warn", "error"]),
+  Rule::allowed_keys("db", ["host", "port"]),
+])
+```
+
+提取到结构体后校验，约束写在 `Validate` 实现里：
+
+```moonbit nocheck
+using @jsonfmt {extract_validated_from}
+
+impl @config.Validate for DbCfg with fn validate(self, prefix) {
+  @config.check_int_range(prefix.add("port"), self.port.to_int64(), 1L, 65535L)
+}
+
+let db : DbCfg = extract_validated_from(cfg, "db")
+```
+
+`validate` 遇错即停，`validate_all` 一次列全；必填项靠 `MissingKey`，未知键靠 `allowed_keys`（不写就不查）。详见 [validate.md](docs/design/validate.md)。
+
 ### 出错时
 
 缺键和类型不符分别报 `MissingKey` / `TypeMismatch`，默认消息带键名、期望类型和实际类型：
@@ -255,7 +284,7 @@ try {
 | 🚧 | **多格式** | JSON、INI、dotenv、YAML、TOML、XML、CBOR 七种格式 |
 | ✅ | **外部来源** | 配置文件、环境变量、命令行、多个来源任意组合 |
 | 🚧 | **来源追踪** | 某个键最终来自哪一层 |
-| ⬜ | **校验** | 必填项、取值范围、自定义规则 |
+| ✅ | **校验** | 必填项、取值范围、自定义规则 |
 | ⬜ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
 | ⬜ | **热更新** | 监听文件变化、重新读取并合并、回调通知、失败时保留旧配置 |
 

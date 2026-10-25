@@ -26,6 +26,7 @@ A native configuration library for MoonBit.
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
 - **Traceable origins**: `origin_of` / `origins()` give you the source object and a structured key path; the display label is generated on demand
+- **Validatable**: rule lists by key or a `Validate` impl on your struct, surfacing missing keys, out-of-range values and unknown keys at startup
 
 ---
 
@@ -233,6 +234,34 @@ let order : OrderCfg = extract_from(cfg, "order")
 order.id.to_int64()   // 9007199254740993, exact even beyond Double's range
 ```
 
+### Validate
+
+Check the configuration at startup so problems surface early. By key, pass a rule list:
+
+```moonbit nocheck
+using @config {type Rule}
+
+cfg.validate([
+  Rule::int_range("db.port", 1L, 65535L),
+  Rule::one_of("log.level", ["debug", "info", "warn", "error"]),
+  Rule::allowed_keys("db", ["host", "port"]),
+])
+```
+
+After extracting into a struct, put the constraints in its `Validate` impl:
+
+```moonbit nocheck
+using @jsonfmt {extract_validated_from}
+
+impl @config.Validate for DbCfg with fn validate(self, prefix) {
+  @config.check_int_range(prefix.add("port"), self.port.to_int64(), 1L, 65535L)
+}
+
+let db : DbCfg = extract_validated_from(cfg, "db")
+```
+
+`validate` stops at the first error, `validate_all` lists them all; missing keys are reported as `MissingKey`, and `allowed_keys` is opt-in for unknown keys. See [validate.md](docs/design/validate.md).
+
 ### When it fails
 
 A missing key and a type mismatch raise `MissingKey` / `TypeMismatch`; the
@@ -262,7 +291,7 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 | 🚧 | **Many formats** | letting other formats plug in |
 | ✅ | **External sources** | Configuration files, environment variables, any combination of sources |
 | 🚧 | **Source tracking** | Which layer a key finally came from |
-| ⬜ | **Validation** | Required keys, value ranges, custom rules |
+| ✅ | **Validation** | Required keys, value ranges, custom rules |
 | ⬜ | **Format detection** | By suffix, by content, an error when neither decides |
 | ⬜ | **Hot reload** | Watch the file, re-read and merge, notify listeners, keep the old config when a new one is bad |
 

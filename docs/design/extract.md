@@ -5,9 +5,10 @@
 ```moonbit
 pub fn[T : FromJson] extract(v : Value) -> T raise ConfigError
 pub fn[T : FromJson] extract_from(cfg : Config, path : String) -> T raise ConfigError
+pub fn[T : FromJson + Validate] extract_validated_from(cfg : Config, path : String) -> T raise ConfigError
 ```
 
-`extract` 提取整棵树，`extract_from` 先按键取子树再提取；后者是自由函数，因为方法不能跨 package（见 [decisions.md](../decisions/decisions.md#2-方法不能跨包)）。
+`extract` 提取整棵树，`extract_from` 先按键取子树再提取；后者是自由函数，因为方法不能跨 package（见 [decisions.md](../decisions/decisions.md#2-方法不能跨包)）。`extract_validated_from` 在提取后调用结构体自己的 `Validate`，见 [validate.md](validate.md)。
 
 实现是 `@json.from_json(to_json(v))`，但整数映射有一个绕不过去的矛盾：
 

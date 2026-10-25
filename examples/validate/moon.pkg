@@ -1,0 +1,7 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/core/format/json_format" @jsonfmt,
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")
