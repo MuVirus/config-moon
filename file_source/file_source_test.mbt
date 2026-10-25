@@ -80,3 +80,55 @@ test "FileSource reports IoError when the file is missing" {
   }
   assert_true(message.contains(path))
 }
+
+///|
+fn remove_file(path : String) -> Unit {
+  if @fs.path_exists(path) {
+    @fs.remove_file(path) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+fn auto_detector() -> @format_detect.Detector raise @config.ConfigError {
+  @format_detect.Detector::new([@json_format.JsonFormat::new()])
+}
+
+///|
+/// `auto` 对有后缀的文件直接走后缀
+test "FileSource::auto uses the file suffix" {
+  let path = "tmp_moonfig_auto_suffix.json"
+  remove_file(path)
+  @fs.write_string_to_file(path, "{\"db\": {\"port\": 5432}}")
+  let cfg = Config::new().add(FileSource::auto(path, auto_detector())).build()
+  assert_eq(cfg.get_int("db.port"), 5432L)
+  remove_file(path)
+}
+
+///|
+/// 没有后缀时 `auto` 按内容猜
+test "FileSource::auto sniffs a file without a suffix" {
+  let path = "tmp_moonfig_auto_no_suffix"
+  remove_file(path)
+  @fs.write_string_to_file(path, "{\"db\": {\"port\": 5432}}")
+  let cfg = Config::new().add(FileSource::auto(path, auto_detector())).build()
+  assert_eq(cfg.get_int("db.port"), 5432L)
+  remove_file(path)
+}
+
+///|
+/// 后缀认识但内容写坏：不换解析器，直接报解析错误
+test "FileSource::auto does not fall back after a known suffix fails" {
+  let path = "tmp_moonfig_auto_bad.json"
+  remove_file(path)
+  @fs.write_string_to_file(path, "not json")
+  let error = try {
+    ignore(Config::new().add(FileSource::auto(path, auto_detector())).build())
+    None
+  } catch {
+    e => Some(e)
+  }
+  assert_true(error is Some(ConfigError::ParseError(_)))
+  remove_file(path)
+}

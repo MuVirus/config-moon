@@ -130,7 +130,7 @@ pub impl @config.Source for CliSource with fn kind(_ : CliSource) -> @config.Sou
 }
 
 ///|
-pub extend CliSource with @config.Source::{collect, kind}
+pub extend CliSource with @config.Source::{collect, kind, raw_locator}
 
 ///|
 /// 参数名 → 层级路径：按 `-` 和 `.` 拆层，统一转小写。

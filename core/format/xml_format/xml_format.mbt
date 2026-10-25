@@ -68,6 +68,32 @@ pub impl @config.Format for XmlFormat with fn decode(
 pub extend XmlFormat with @config.Format::{decode}
 
 ///|
+pub impl @config.Format for XmlFormat with fn suffixes(_ : XmlFormat) -> Array[
+  String,
+] {
+  ["xml"]
+}
+
+///|
+/// 第一个非空白字符是 `<` 就像 XML。
+pub impl @config.Format for XmlFormat with fn sniff(
+  _ : XmlFormat,
+  bytes : Bytes,
+) -> Bool {
+  for byte in bytes {
+    let code = byte.to_int()
+    if code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D {
+      continue
+    }
+    return code == 0x3C
+  }
+  false
+}
+
+///|
+pub extend XmlFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// XML 文本 → `Value`。
 fn parse_xml(text : String) -> @config.Value raise @config.ConfigError {
   match read_events(text) {

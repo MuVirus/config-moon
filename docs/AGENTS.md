@@ -11,12 +11,12 @@
   - [`sources.md`](design/sources.md) —— Source / Format 接口、core 边界、package 划分、来源追踪、第三方解析器的取舍
   - [`extract.md`](design/extract.md) —— 提取到结构体、整数映射、错误消息
   - [`validate.md`](design/validate.md) —— 校验：按键规则表、结构体 `Validate`、未知键、错误
+  - [`format-detect.md`](design/format-detect.md) —— 自动发现格式：后缀优先、内容判断、候选顺序
+  - [`hot-reload.md`](design/hot-reload.md) —— 热更新：快照替换、文件轮询、失败保留旧配置
 - `decisions/` —— 决策记录，讲「当时为什么这么定」
   - [`decisions.md`](decisions/decisions.md) —— 包名、跨包方法、Bytes、JSON 数值、CBOR 选型、来源追踪（`OriginSite` / `KeyPath`）与合并规则、外部 Source、字符串比较、校验
 - `plan/` —— 计划文档，讲「接下来做什么」
   - [`roadmap.md`](plan/roadmap.md) —— 待实现的方向、进度
-  - [`format-detect.md`](plan/format-detect.md) —— 自动发现格式：后缀、内容判断、候选列表
-  - [`hot-reload.md`](plan/hot-reload.md) —— 热更新：`LiveConfig`、快照替换、轮询与回调
 - `conventions/` —— 项目规范，讲「怎么做」
   - [`testing.md`](conventions/testing.md) —— 测试写法
 

@@ -14,6 +14,8 @@ pub struct DotenvFormat {
 }
 pub fn DotenvFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
 pub fn DotenvFormat::new() -> Self
+pub fn DotenvFormat::sniff(Self, Bytes) -> Bool
+pub fn DotenvFormat::suffixes(Self) -> Array[String]
 pub impl @core.Format for DotenvFormat
 
 // Type aliases

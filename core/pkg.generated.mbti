@@ -8,7 +8,7 @@ import {
 // Values
 pub fn check_int_range(KeyPath, Int64, Int64, Int64) -> Unit raise ConfigError
 
-pub fn check_string_len(KeyPath, String, Int32, Int32) -> Unit raise ConfigError
+pub fn check_string_len(KeyPath, String, Int, Int) -> Unit raise ConfigError
 
 // Errors
 pub(all) suberror ConfigError {
@@ -19,6 +19,7 @@ pub(all) suberror ConfigError {
   MergeConflict(String, String, String)
   InvalidValue(String, String, String)
   UnknownKey(String)
+  UnknownFormat(String, Array[String])
 } derive(Eq, @debug.Debug)
 pub fn ConfigError::equal(Self, Self) -> Bool
 pub fn ConfigError::not_equal(Self, Self) -> Bool
@@ -44,6 +45,7 @@ pub struct Config {
 }
 pub fn Config::add(Self, &Source) -> Self
 pub fn Config::build(Self) -> Self raise ConfigError
+pub fn Config::build_live(Self) -> LiveConfig raise ConfigError
 pub fn Config::get_bool(Self, String) -> Bool raise ConfigError
 pub fn Config::get_bytes(Self, String) -> Bytes raise ConfigError
 pub fn Config::get_float(Self, String) -> Double raise ConfigError
@@ -76,6 +78,16 @@ pub struct Layer {
 pub fn Layer::new(Value, &OriginSite?) -> Self
 pub fn Layer::untracked(Value) -> Self
 
+pub struct LiveConfig {
+  mut current : Config
+  mut locators : Array[&Locator]
+  mut snapshots : Array[Bytes]
+  // private fields
+}
+pub fn LiveConfig::current(Self) -> Config
+pub fn LiveConfig::poll(Self, rules? : Array[Rule]) -> Bool raise ConfigError
+pub fn LiveConfig::reload(Self, rules? : Array[Rule]) -> Unit raise ConfigError
+
 pub struct MemorySource {
   table : Value
 }
@@ -107,7 +119,7 @@ pub fn Rule::allowed_keys(String, Array[String]) -> Self
 pub fn Rule::custom(String, String, (Value) -> String?) -> Self
 pub fn Rule::int_range(String, Int64, Int64) -> Self
 pub fn Rule::one_of(String, Array[String]) -> Self
-pub fn Rule::string_len(String, Int32, Int32) -> Self
+pub fn Rule::string_len(String, Int, Int) -> Self
 
 pub(all) enum SourceKind {
   Memory
@@ -171,6 +183,8 @@ pub fn ValueKind::to_repr(Self) -> @debug.Repr
 // Traits
 pub(open) trait Format {
   fn decode(Self, Bytes) -> Value raise ConfigError
+  fn suffixes(Self) -> Array[String] = _
+  fn sniff(Self, Bytes) -> Bool = _
 }
 
 pub(open) trait Locator {

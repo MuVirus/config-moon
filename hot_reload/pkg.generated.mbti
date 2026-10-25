@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/hot_reload"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+pub fn watch(@core.LiveConfig, interval? : Int, on_change? : (@core.Config) -> Unit raise @core.ConfigError, on_error? : (@core.ConfigError) -> Unit raise @core.ConfigError) -> Watcher
+
+// Errors
+
+// Types and methods
+pub struct Watcher {
+  // private fields
+}
+pub fn Watcher::interval(Self) -> Int
+pub fn Watcher::is_stopped(Self) -> Bool
+pub fn Watcher::poll(Self) -> Bool
+pub fn Watcher::stop(Self) -> Unit
+
+// Type aliases
+
+// Traits

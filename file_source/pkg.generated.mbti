@@ -3,6 +3,7 @@ package "MuVirus/moonfig/file_source"
 
 import {
   "MuVirus/moonfig/core",
+  "MuVirus/moonfig/format_detect",
 }
 
 // Values
@@ -13,7 +14,9 @@ import {
 pub struct FileSource {
   path : String
   format : &@core.Format
+  detector : @format_detect.Detector?
 }
+pub fn FileSource::auto(String, @format_detect.Detector) -> Self
 pub fn FileSource::collect(Self) -> @core.Layer raise @core.ConfigError
 pub fn FileSource::describe(Self, @core.KeyPath) -> String
 pub fn FileSource::kind(Self) -> @core.SourceKind

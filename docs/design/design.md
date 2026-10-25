@@ -70,6 +70,8 @@ cfg.get_bytes("cert")            // Bytes
 - 路径用点号展开：`"db.host"` → `Table{"db": Table{"host": ...}}`
 - key 不存在 → **报错，不返回默认值**（默认值应该由 `MemorySource` 提供，那才是它的职责）
 
+需要配置文件变化后自动重读时，用 `build_live()` 保留来源清单，见 [hot-reload.md](hot-reload.md)。
+
 ## 4. 错误
 
 ```moonbit
@@ -81,6 +83,7 @@ pub(all) suberror ConfigError {
   MergeConflict(String, String, String)   // 类型冲突：路径、两侧类型；当前没有代码路径会抛
   InvalidValue(String, String, String)    // 校验失败：路径、期望约束、实际
   UnknownKey(String)                      // 校验时发现不在允许列表里的键
+  UnknownFormat(String, Array[String])    // 无法判断格式：名称、支持的后缀
 }
 ```
 
@@ -94,4 +97,6 @@ pub(all) suberror ConfigError {
 - [sources.md](sources.md) —— Source / Format 模型、package 划分与来源追踪
 - [extract.md](extract.md) —— 提取到结构体、整数映射、错误消息
 - [validate.md](validate.md) —— 校验：按键规则表、结构体 `Validate`、未知键
+- [format-detect.md](format-detect.md) —— 自动发现格式：后缀优先、内容判断、候选顺序
+- [hot-reload.md](hot-reload.md) —— 热更新：快照替换、文件轮询、失败保留旧配置
 - [../decisions/decisions.md](../decisions/decisions.md) —— 决策记录

@@ -11,6 +11,7 @@
 pub(open) trait Source {
   fn collect(Self) -> Layer raise ConfigError
   fn kind(Self) -> SourceKind = _   // 默认 Custom
+  fn raw_locator(Self) -> &Locator? = _   // 默认 None；热更新用
 }
 
 pub struct Layer {
@@ -20,7 +21,9 @@ pub struct Layer {
 ```
 
 `Config::add` 只认 `Source`；默认按加入顺序合并，规则见 [design.md](design.md#3-配置对象与取值)。
-`Source::kind` 给 `ByKind` 排序用，不需要先 `collect`。
+`Source::kind` 给 `ByKind` 排序用，不需要先 `collect`。`Source::raw_locator` 给热更新用：
+文件来源返回可重读的 `Locator`，即使它的键被后面的来源覆盖，改文件仍然能触发重读；见
+[hot-reload.md](hot-reload.md#什么算变化)。
 
 ## 六种 Source
 
@@ -54,7 +57,7 @@ site 里存「路径 → 参数名」索引，标签是不带值的参数名（`
 
 ## `core/` 里放什么
 
-只放 `Source`、`Format`、`Locator`、`OriginSite` 四个 trait，和 `MemorySource`、`StringSource`、`BytesSource` 三个实现。`FileSource`、`EnvSource`、`CliSource` 不额外定义标记 trait，各自在自己包里 `impl Source`；`FileSource` 另外实现 `OriginSite` 和 `Locator`。
+只放 `Source`、`Format`、`Locator`、`OriginSite` 四个 trait，`MemorySource`、`StringSource`、`BytesSource` 三个实现，以及热更新用的 `LiveConfig`。`LiveConfig` 只通过 `Locator` 读字节，不直接调平台 API；`FileSource`、`EnvSource`、`CliSource` 不额外定义标记 trait，各自在自己包里 `impl Source`；`FileSource` 另外实现 `OriginSite` 和 `Locator`。
 
 `core/` 里这三个实现是纯计算，不碰 IO，所有 target 都能编；每个格式 package 又都要用 `StringSource` / `BytesSource`，放在 `core/` 才不会各写一份。
 
@@ -62,7 +65,7 @@ site 里存「路径 → 参数名」索引，标签是不带值的参数名（`
 
 ## package 划分与命名
 
-- `core/`：core 包，四个 trait 加三个实现。
+- `core/`：core 包，四个 trait、三个内存实现，以及 `LiveConfig`。
 - `core/format/xxx_format/`：只提供一个 `Format` 类型，例如 `JsonFormat`、`TomlFormat`，不再包一层 `Source`。依赖写在自己的 `moon.pkg` 里，加一种格式只动这个 package。
 - `file_source/`、`env_source/`、`cli_source/`：`Source` 实现，和 `core/` 平级。
 
@@ -103,10 +106,13 @@ pub(open) trait Locator {
 pub(open) trait Source {
   fn collect(Self) -> Layer raise ConfigError
   fn kind(Self) -> SourceKind = _   // blanket impl 给 Custom
+  fn raw_locator(Self) -> &Locator? = _   // 默认 None；热更新用
 }
 ```
 
 `Format` 不打标——同一个 `JsonFormat` 可能解析内存字符串，也可能解析文件，它不知道位置。
+它另外提供 `suffixes` / `sniff` / `decode_path` 三个默认方法，让格式自己声明后缀和内容特征；
+自动发现见 [format-detect.md](format-detect.md)。
 
 `Config::merged` 在每次 `collect()` 后递归给整棵树补 site，再 merge；`build` 清掉 `sources`
 也不丢信息。合并时 site 跟着赢家走，表节点取覆盖方的 site。已经有 site 的节点不会被覆盖，
@@ -127,7 +133,8 @@ pub(open) trait Source {
 `StringSource` / `BytesSource` 报 `SourceKind::Custom`，标签是 `string` / `bytes`。
 
 `FileSource` 自己是这层的 site，同时实现 `Locator`：`label()` 是 `file:<路径>`，
-`locator()` 调一次 `read()` 就重新读出同一份字节。读文件失败报 `ConfigError::IoError`，
+`locator()` 调一次 `read()` 就重新读出同一份字节。它的 `raw_locator()` 也返回自己，
+所以热更新能跟踪到被覆盖的文件来源。读文件失败报 `ConfigError::IoError`，
 消息里带路径和底层原因；解析失败仍是 `ParseError`。
 
 环境变量、命令行的 site 里存「路径 → 原始变量名/参数名」索引：`describe(path)` 拼成

@@ -62,6 +62,28 @@ pub impl @config.Format for CborFormat with fn decode(
 pub extend CborFormat with @config.Format::{decode}
 
 ///|
+pub impl @config.Format for CborFormat with fn suffixes(_ : CborFormat) -> Array[
+  String,
+] {
+  ["cbor"]
+}
+
+///|
+/// 首字节的 major type 是 map（5）就像 CBOR。
+pub impl @config.Format for CborFormat with fn sniff(
+  _ : CborFormat,
+  bytes : Bytes,
+) -> Bool {
+  if bytes.is_empty() {
+    return false
+  }
+  ((bytes[0].to_int() >> 5) & 0x07) == 5
+}
+
+///|
+pub extend CborFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// CBOR 字节 → `Value`。
 fn parse_cbor(bytes : Bytes) -> @config.Value raise @config.ConfigError {
   let decoded = @cbor.decode(bytes) catch {

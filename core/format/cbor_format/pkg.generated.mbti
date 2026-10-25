@@ -14,6 +14,8 @@ pub struct CborFormat {
 }
 pub fn CborFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
 pub fn CborFormat::new() -> Self
+pub fn CborFormat::sniff(Self, Bytes) -> Bool
+pub fn CborFormat::suffixes(Self) -> Array[String]
 pub impl @core.Format for CborFormat
 
 // Type aliases

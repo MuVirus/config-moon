@@ -1,11 +1,14 @@
 import {
   "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/format_detect",
   "moonbitlang/x/fs",
 }
 
 import {
   "MuVirus/moonfig/file_source",
   "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/format_detect",
+  "MuVirus/moonfig/core/format/json_format",
   "moonbitlang/x/fs",
   "moonbitlang/core/encoding/utf8",
 } for "test"

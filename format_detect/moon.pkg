@@ -1,0 +1,12 @@
+import {
+  "MuVirus/moonfig/core" @config,
+}
+
+import {
+  "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/format_detect",
+  "MuVirus/moonfig/core/format/json_format",
+  "MuVirus/moonfig/core/format/toml_format",
+  "MuVirus/moonfig/core/format/yaml_format",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

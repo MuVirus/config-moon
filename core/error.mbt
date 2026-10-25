@@ -10,6 +10,7 @@ pub(all) suberror ConfigError {
   MergeConflict(String, String, String) // 类型冲突：路径、两侧类型
   InvalidValue(String, String, String) // 校验失败：路径、期望约束、实际
   UnknownKey(String) // 校验时发现不在允许列表里的键
+  UnknownFormat(String, Array[String]) // 无法判断格式：名称、支持的后缀
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -29,6 +30,19 @@ pub impl Show for ConfigError with fn output(self, logger) {
       logger <+
         "配置项 \{path} 不符合约束：期望 \{expected}，实际 \{actual}"
     UnknownKey(path) => logger <+ "配置项 \{path} 不在允许的键里"
+    UnknownFormat(name, suffixes) => {
+      logger <+
+        "无法判断 \{name} 的格式：后缀不认识，内容也不像任何候选"
+      if !suffixes.is_empty() {
+        logger <+ "；支持 "
+        for i, suffix in suffixes {
+          if i > 0 {
+            logger <+ " / "
+          }
+          logger <+ ".\{suffix}"
+        }
+      }
+    }
   }
 }
 

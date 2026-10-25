@@ -27,6 +27,32 @@ pub impl @config.Format for JsonFormat with fn decode(
 pub extend JsonFormat with @config.Format::{decode}
 
 ///|
+pub impl @config.Format for JsonFormat with fn suffixes(_ : JsonFormat) -> Array[
+  String,
+] {
+  ["json"]
+}
+
+///|
+/// 第一个非空白字符是 `{` 或 `[` 就像 JSON。
+pub impl @config.Format for JsonFormat with fn sniff(
+  _ : JsonFormat,
+  bytes : Bytes,
+) -> Bool {
+  for byte in bytes {
+    let code = byte.to_int()
+    if code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D {
+      continue
+    }
+    return code == 0x7B || code == 0x5B
+  }
+  false
+}
+
+///|
+pub extend JsonFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// `Json` → `Value`：数字分成 `Int` / `Float`，整数一律 `Int64`。
 ///
 /// core 的 `Json::Number` 带一个 `repr` 字段，**只在字面量超出 `Double`

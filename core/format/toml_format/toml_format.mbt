@@ -55,6 +55,44 @@ pub impl @config.Format for TomlFormat with fn decode(
 pub extend TomlFormat with @config.Format::{decode}
 
 ///|
+pub impl @config.Format for TomlFormat with fn suffixes(_ : TomlFormat) -> Array[
+  String,
+] {
+  ["toml"]
+}
+
+///|
+/// 有段落头（`[table]` / `[[array]]`）或 `key = value` 就像 TOML。
+///
+/// TOML 和 INI 内容上分不开；顺序就是优先级，调用方把特征更强的放前面。
+pub impl @config.Format for TomlFormat with fn sniff(
+  _ : TomlFormat,
+  bytes : Bytes,
+) -> Bool {
+  let text = @utf8.decode(bytes) catch { _ => return false }
+  for raw in text.split("\n") {
+    let line = raw.trim()
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    if line.has_prefix("[") {
+      if line.has_suffix("]") {
+        return true
+      }
+      continue
+    }
+    match line.split_once("=") {
+      Some((key, _)) => if !key.trim_end().is_empty() { return true }
+      None => ()
+    }
+  }
+  false
+}
+
+///|
+pub extend TomlFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// TOML 文本 → `Value`。
 fn parse_toml(text : String) -> @config.Value raise @config.ConfigError {
   let parsed = @toml.parse(text) catch {

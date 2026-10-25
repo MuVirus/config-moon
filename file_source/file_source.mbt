@@ -21,6 +21,17 @@ pub fn FileSource::new(path : String, format : &@config.Format) -> FileSource {
 }
 
 ///|
+/// 用路径和自动检测器构造文件来源：后缀认识走后缀，否则看内容。
+///
+/// 后缀认识却解析失败时直接报错，不会偷偷换一个格式重试。
+pub fn FileSource::auto(
+  path : String,
+  detector : @format_detect.Detector,
+) -> FileSource {
+  { path, format: detector as &@config.Format }
+}
+
+///|
 /// 读文件；读不到时把路径和底层原因一起报出来
 pub impl @config.Locator for FileSource with fn read(self : FileSource) -> Bytes raise @config.ConfigError {
   @fs.read_file_to_bytes(self.path) catch {
@@ -52,7 +63,8 @@ pub impl @config.OriginSite for FileSource with fn locator(self : FileSource) ->
 ///|
 /// 文件内容交给格式解析
 pub impl @config.Source for FileSource with fn collect(self : FileSource) -> @config.Layer raise @config.ConfigError {
-  let value = self.format.decode(@config.Locator::read(self))
+  let bytes = @config.Locator::read(self)
+  let value = self.format.decode_path(self.path, bytes)
   @config.Layer::new(value, Some(self as &@config.OriginSite))
 }
 
@@ -62,10 +74,16 @@ pub impl @config.Source for FileSource with fn kind(_ : FileSource) -> @config.S
 }
 
 ///|
+/// 文件来源知道自己能反推原始字节
+pub impl @config.Source for FileSource with fn raw_locator(self : FileSource) -> &@config.Locator? {
+  Some(self as &@config.Locator)
+}
+
+///|
 pub extend FileSource with @config.Locator::{read}
 
 ///|
 pub extend FileSource with @config.OriginSite::{describe, locator}
 
 ///|
-pub extend FileSource with @config.Source::{collect, kind}
+pub extend FileSource with @config.Source::{collect, kind, raw_locator}

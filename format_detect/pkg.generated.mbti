@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "MuVirus/moonfig/format_detect"
+
+import {
+  "MuVirus/moonfig/core",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Detector {
+  // private fields
+}
+pub fn Detector::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn Detector::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
+pub fn Detector::new(Array[&@core.Format]) -> Self raise @core.ConfigError
+pub fn Detector::sniff(Self, Bytes) -> Bool
+pub fn Detector::suffixes(Self) -> Array[String]
+pub fn Detector::supported_suffixes(Self) -> Array[String]
+pub impl @core.Format for Detector
+
+// Type aliases
+
+// Traits

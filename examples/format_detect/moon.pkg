@@ -1,0 +1,10 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/core/format/json_format" @jsonfmt,
+  "MuVirus/moonfig/core/format/toml_format" @tomlfmt,
+  "MuVirus/moonfig/core/format/yaml_format" @yamlfmt,
+  "MuVirus/moonfig/file_source",
+  "MuVirus/moonfig/format_detect" @detect,
+}
+
+pkgtype(kind: "executable")

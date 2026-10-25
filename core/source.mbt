@@ -29,10 +29,18 @@ pub(open) trait Source {
   fn collect(Self) -> Layer raise ConfigError
   /// 合并规则按它排序；默认归到 `Custom`。
   fn kind(Self) -> SourceKind = _
+  /// 文件类来源能反推原始字节时给
+  fn raw_locator(Self) -> &Locator? = _
 }
 
 ///|
 /// 默认是自定义来源
 impl Source with fn kind(_) {
   SourceKind::Custom
+}
+
+///|
+/// 默认不能反推原始字节
+impl Source with fn raw_locator(_) {
+  None
 }

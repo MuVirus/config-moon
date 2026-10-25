@@ -53,6 +53,17 @@ pub impl @config.Format for IniFormat with fn decode(
 pub extend IniFormat with @config.Format::{decode}
 
 ///|
+/// 单看内容和 `.env` 分不开，所以只认后缀，不参与内容判断。
+pub impl @config.Format for IniFormat with fn suffixes(_ : IniFormat) -> Array[
+  String,
+] {
+  ["ini"]
+}
+
+///|
+pub extend IniFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// INI 文本 → `Value`。
 fn parse_ini(text : String) -> @config.Value raise @config.ConfigError {
   let root : Map[String, @config.Value] = Map([])

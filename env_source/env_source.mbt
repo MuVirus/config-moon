@@ -114,7 +114,7 @@ pub impl @config.Source for EnvSource with fn kind(_ : EnvSource) -> @config.Sou
 }
 
 ///|
-pub extend EnvSource with @config.Source::{collect, kind}
+pub extend EnvSource with @config.Source::{collect, kind, raw_locator}
 
 ///|
 /// 变量名 → 层级路径：去掉前缀后按 `_` 和 `.` 拆层，统一转小写。

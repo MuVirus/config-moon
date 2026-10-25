@@ -42,4 +42,4 @@ pub impl Source for StringSource with fn kind(_ : StringSource) -> SourceKind {
 }
 
 ///|
-pub extend StringSource with Source::{collect, kind}
+pub extend StringSource with Source::{collect, kind, raw_locator}

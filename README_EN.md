@@ -22,9 +22,11 @@ A native configuration library for MoonBit.
 - **Type-safe configuration**: `derive(FromJson)` generates the deserialization for your config struct, so extracting a value yields that type directly. No code generator, no custom derive trait — MoonBit's own derive mechanism does the work
 - **Strict typing**: every read and every extraction checks the declared type; nothing is converted implicitly, and a mismatch is an error
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
+- **Format detection**: `Detector` checks the file suffix first, then the content; when neither decides it raises `UnknownFormat` listing the candidate suffixes
+- **Hot reload**: `build_live()` keeps the source list, and `Watcher::poll()` detects file changes and swaps the snapshot; a bad config never takes effect
 - **Layered sources**: in-memory defaults, config files, environment variables and command-line flags stack in the order you add them, later ones winning
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
-- **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError`, each message carrying the key, the expected type and the actual type
+- **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError` / `UnknownFormat`, each message carrying the key, the expected type and the actual type
 - **Traceable origins**: `origin_of` / `origins()` give you the source object and a structured key path; the display label is generated on demand
 - **Validatable**: rule lists by key or a `Validate` impl on your struct, surfacing missing keys, out-of-range values and unknown keys at startup
 
@@ -180,6 +182,67 @@ let cfg = Config::new()
 - `EnvSource`: reads only variables with the given prefix; both `_` and `.` split levels, names are lowercased, and values are inferred from their text (`"5432"` → `Int`, `"true"` → `Bool`). `EnvSource::all()` reads every variable. A scalar in the way of a branch, or two variables landing on one path, is an error rather than a guess.
 - `CliSource`: accepts `--key=value`, `--flag` and `--no-flag`; everything after `--` is positional. The same key twice means the later one wins, but a scalar and a branch in each other's way is an error. The label is the argument name without its value, so passwords never reach the logs.
 
+### Format detection
+
+Hand the path to `FileSource::auto` and leave the format out:
+
+```moonbit nocheck
+using @config {type Config}
+using @file_source {type FileSource}
+using @format_detect {type Detector}
+using @jsonfmt {type JsonFormat}
+using @tomlfmt {type TomlFormat}
+using @yamlfmt {type YamlFormat}
+
+let detector = Detector::new([
+  JsonFormat::new(),
+  TomlFormat::new(),
+  YamlFormat::new(),
+])
+
+let cfg = Config::new()
+  .add(FileSource::auto("config/app.toml", detector))
+  .build()
+```
+
+A known suffix selects its format directly. When the suffix is missing or unknown, candidates are asked in order and the first one that looks like a match wins. That order is the priority: put JSON before YAML, since JSON is usually valid YAML too. A known suffix that fails to parse raises `ParseError` instead of silently trying the next candidate; when neither suffix nor content matches, `UnknownFormat` lists the candidate suffixes.
+
+Full example: [examples/format_detect](examples/format_detect/README.md).
+
+### Hot reload
+
+`build_live()` merges like `build()` but keeps the source list for later:
+
+```moonbit nocheck
+using @config {type Config, type Rule}
+using @file_source {type FileSource}
+using @format_detect {type Detector}
+using @jsonfmt {type JsonFormat}
+using @hot_reload {type Watcher}
+
+let live = Config::new()
+  .add(FileSource::auto("config/app.json", Detector::new([JsonFormat::new()])))
+  .build_live()
+
+let watcher = @hot_reload.watch(
+  live,
+  interval=1000,
+  on_change=fn(cfg) { println("port = \{cfg.get_int("db.port")}") },
+  on_error=fn(error) { println("new config kept out: \{error}") },
+)
+
+// Call it from your timer or event loop; true means a change was detected and reload was attempted
+watcher.poll()
+
+// Manual reload with validation rules
+live.reload(rules=[Rule::int_range("db.port", 1L, 65535L)])
+watcher.stop()
+```
+
+`watch()` only registers the callbacks and the `LiveConfig`; it does not start a timer. `interval` is a suggestion and the caller owns the cadence, so the library stays independent of any async runtime. `poll()` tracks file sources only and compares bytes rather than mtime; environment variables and command-line arguments have no reliable change event, so use `reload()` for those. A parse or validation failure leaves the old snapshot in place; the next successful `poll()` picks up the fixed file.
+
+Full example: [examples/hot_reload](examples/hot_reload/README.md).
+
 ### Source tracking
 
 Every value remembers the layer it came from, so you can ask after reading:
@@ -292,10 +355,12 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 | ✅ | **External sources** | Configuration files, environment variables, any combination of sources |
 | 🚧 | **Source tracking** | Which layer a key finally came from |
 | ✅ | **Validation** | Required keys, value ranges, custom rules |
-| ⬜ | **Format detection** | By suffix, by content, an error when neither decides |
-| ⬜ | **Hot reload** | Watch the file, re-read and merge, notify listeners, keep the old config when a new one is bad |
+| ✅ | **Format detection** | By suffix, by content, an error when neither decides |
+| ✅ | **Hot reload** | Poll for file changes, re-read and merge, notify listeners, keep the old config when a new one is bad |
 
 ✅ done (in maintenance)　🚧 in progress　⬜ not started
+
+The hot-reload timer is caller-driven: `Watcher::poll()` performs one round of detection, and `interval` is only a suggestion.
 
 The full item list and the trade-offs behind them live in
 [docs/plan/roadmap.md](docs/plan/roadmap.md).
@@ -308,6 +373,8 @@ The full item list and the trade-offs behind them live in
 - `moon doc --serve` —— start a local preview (http://127.0.0.1:3000 by default)
 - `examples/` —— runnable examples, `moon run examples/<name>`
 - [docs/AGENTS.md](docs/AGENTS.md) —— documentation index and writing rules
+- [docs/design/format-detect.md](docs/design/format-detect.md) —— format detection design
+- [docs/design/hot-reload.md](docs/design/hot-reload.md) —— hot reload design
 
 > The documents under `docs/` are written in Chinese.
 

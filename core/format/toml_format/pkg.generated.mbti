@@ -14,6 +14,8 @@ pub struct TomlFormat {
 }
 pub fn TomlFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
 pub fn TomlFormat::new() -> Self
+pub fn TomlFormat::sniff(Self, Bytes) -> Bool
+pub fn TomlFormat::suffixes(Self) -> Array[String]
 pub impl @core.Format for TomlFormat
 
 // Type aliases

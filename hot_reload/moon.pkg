@@ -1,0 +1,13 @@
+import {
+  "MuVirus/moonfig/core" @config,
+  "moonbitlang/core/ref",
+}
+
+import {
+  "MuVirus/moonfig/hot_reload",
+  "MuVirus/moonfig/core" @config,
+  "MuVirus/moonfig/file_source",
+  "MuVirus/moonfig/format_detect",
+  "MuVirus/moonfig/core/format/json_format",
+  "moonbitlang/x/fs",
+} for "test"

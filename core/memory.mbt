@@ -51,4 +51,4 @@ pub impl Source for MemorySource with fn kind(_ : MemorySource) -> SourceKind {
 }
 
 ///|
-pub extend MemorySource with Source::{collect, kind}
+pub extend MemorySource with Source::{collect, kind, raw_locator}

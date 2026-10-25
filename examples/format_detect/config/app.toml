@@ -1,0 +1,6 @@
+[db]
+host = "toml.internal"
+port = 5432
+
+[feature]
+debug = true

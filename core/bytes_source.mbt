@@ -41,4 +41,4 @@ pub impl Source for BytesSource with fn kind(_ : BytesSource) -> SourceKind {
 }
 
 ///|
-pub extend BytesSource with Source::{collect, kind}
+pub extend BytesSource with Source::{collect, kind, raw_locator}

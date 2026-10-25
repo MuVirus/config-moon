@@ -1,0 +1,5 @@
+db:
+  host: yaml.internal
+  port: 7000
+feature:
+  debug: true

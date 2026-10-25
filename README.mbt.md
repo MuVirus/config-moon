@@ -22,9 +22,11 @@ MoonBit 原生配置库
 - **类型安全配置**：通过 `derive(FromJson)` 自动生成配置结构体的反序列化实现，提取结果即为该类型；无需额外的代码生成器，使用 MoonBit 原生派生机制
 - **严格类型转换**：取值与提取都按声明的类型逐项检查，不做隐式转换，类型不服即错误
 - **多格式支持**：JSON、INI、dotenv、YAML、TOML、XML、CBOR 字节或自建的 `Value` 树都能作为来源，换格式不用改上层声明
+- **自动发现格式**：`Detector` 先认文件后缀，再看内容；无法判断时报 `UnknownFormat` 并列出候选后缀
+- **热更新**：`build_live()` 保留来源清单，`Watcher::poll()` 检测文件变化并替换快照；坏配置不会生效
 - **多层来源**：内存默认值、配置文件、环境变量、命令行参数按加入顺序叠加，后加的覆盖先加的
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
-- **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError`，错误消息包含键名、期望类型与实际类型
+- **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError` / `UnknownFormat`，错误消息包含键名、期望类型与实际类型
 - **来源可追**：`origin_of` / `origins()` 给出源对象和结构化层级路径，展示用的 label 按需生成
 - **可校验**：按键用规则表，结构体用 `Validate`，启动时一次暴露缺失、越界和未知键
 
@@ -174,6 +176,67 @@ let cfg = Config::new()
 - `EnvSource`：只读指定前缀的变量，`_` 和 `.` 都算层级，键名转小写，值按字面猜类型（`"5432"` → `Int`、`"true"` → `Bool`）；`EnvSource::all()` 读全部变量。标量占了层级名、或两个变量落到同一个路径时报错，不猜谁该赢。
 - `CliSource`：只认 `--key=value`、`--flag`、`--no-flag`，`--` 之后全是位置参数；同一个键写两次后写的赢，标量和层级互相挡路时报错；标签是不带值的参数名，密码不会漏进日志。
 
+### 自动发现格式
+
+不写格式，把路径交给 `FileSource::auto`：
+
+```moonbit nocheck
+using @config {type Config}
+using @file_source {type FileSource}
+using @format_detect {type Detector}
+using @jsonfmt {type JsonFormat}
+using @tomlfmt {type TomlFormat}
+using @yamlfmt {type YamlFormat}
+
+let detector = Detector::new([
+  JsonFormat::new(),
+  TomlFormat::new(),
+  YamlFormat::new(),
+])
+
+let cfg = Config::new()
+  .add(FileSource::auto("config/app.toml", detector))
+  .build()
+```
+
+后缀认识就直接用对应格式；后缀缺失或不认识时，按候选顺序看内容，第一个「像」的胜出。候选顺序就是优先级，JSON 应排在 YAML 前面，因为 JSON 通常也是合法 YAML。后缀认识但解析失败时直接报 `ParseError`，不会偷偷换下一个候选；后缀和内容都不像时报 `UnknownFormat`，消息里列出候选后缀。
+
+完整示例：[examples/format_detect](examples/format_detect/README.md)。
+
+### 热更新
+
+`build_live()` 和 `build()` 一样先合并，但保留来源清单：
+
+```moonbit nocheck
+using @config {type Config, type Rule}
+using @file_source {type FileSource}
+using @format_detect {type Detector}
+using @jsonfmt {type JsonFormat}
+using @hot_reload {type Watcher}
+
+let live = Config::new()
+  .add(FileSource::auto("config/app.json", Detector::new([JsonFormat::new()])))
+  .build_live()
+
+let watcher = @hot_reload.watch(
+  live,
+  interval=1000,
+  on_change=fn(cfg) { println("port = \{cfg.get_int("db.port")}") },
+  on_error=fn(error) { println("新配置没生效：\{error}") },
+)
+
+// 由调用方的定时器或事件循环调用；返回 true 表示检测到变化并尝试 reload
+watcher.poll()
+
+// 也可以手动重载并带校验规则
+live.reload(rules=[Rule::int_range("db.port", 1L, 65535L)])
+watcher.stop()
+```
+
+`watch()` 只登记回调和 `LiveConfig`，不启动定时器；`interval` 是建议值，实际节奏由调用方决定，这样库不绑定某个异步运行时。`poll()` 只跟踪文件来源，比较内容而不看 mtime；环境变量和命令行没有可靠的变化事件，仍用 `reload()`。解析或校验失败时旧快照继续用，修好后下一次 `poll()` 会自动生效。
+
+完整示例：[examples/hot_reload](examples/hot_reload/README.md)。
+
 ### 来源追踪
 
 每个值都记着来自哪一层，取值之后可以直接问：
@@ -285,10 +348,12 @@ try {
 | ✅ | **外部来源** | 配置文件、环境变量、命令行、多个来源任意组合 |
 | 🚧 | **来源追踪** | 某个键最终来自哪一层 |
 | ✅ | **校验** | 必填项、取值范围、自定义规则 |
-| ⬜ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
-| ⬜ | **热更新** | 监听文件变化、重新读取并合并、回调通知、失败时保留旧配置 |
+| ✅ | **自动发现格式** | 按后缀判断、按内容判断、无法判断时报错 |
+| ✅ | **热更新** | 轮询文件变化、重新读取并合并、回调通知、失败时保留旧配置 |
 
 ✅ 已完成（进入维护）　🚧 进行中　⬜ 未进行
+
+热更新的定时器由调用方驱动：`Watcher::poll()` 负责一轮检测，`interval` 只是建议值。
 
 完整的条目和取舍见 [docs/plan/roadmap.md](docs/plan/roadmap.md)。
 
@@ -300,6 +365,8 @@ try {
 - `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
 - `examples/` —— 可运行示例，`moon run examples/<示例名>`
 - [docs/AGENTS.md](docs/AGENTS.md) —— 文档索引与写作规范
+- [docs/design/format-detect.md](docs/design/format-detect.md) —— 自动发现格式的设计
+- [docs/design/hot-reload.md](docs/design/hot-reload.md) —— 热更新的设计
 
 ---
 

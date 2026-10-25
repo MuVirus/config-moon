@@ -63,6 +63,17 @@ pub impl @config.Format for DotenvFormat with fn decode(
 pub extend DotenvFormat with @config.Format::{decode}
 
 ///|
+/// `.env` 和 INI 内容上分不开，所以只认后缀，不参与内容判断。
+pub impl @config.Format for DotenvFormat with fn suffixes(_ : DotenvFormat) -> Array[
+  String,
+] {
+  ["env"]
+}
+
+///|
+pub extend DotenvFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// `.env` 文本 → `Value`。
 fn parse_dotenv(text : String) -> @config.Value raise @config.ConfigError {
   let root : Map[String, @config.Value] = Map([])

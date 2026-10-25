@@ -56,6 +56,69 @@ pub impl @config.Format for YamlFormat with fn decode(
 pub extend YamlFormat with @config.Format::{decode}
 
 ///|
+pub impl @config.Format for YamlFormat with fn suffixes(_ : YamlFormat) -> Array[
+  String,
+] {
+  ["yaml", "yml"]
+}
+
+///|
+/// 顶层有 `key:` 或 `- ` 就像 YAML；缩进行不算顶层。
+fn yaml_key_line(line : StringView) -> Bool {
+  if line.has_prefix("{") || line.has_prefix("[") {
+    return false
+  }
+  match line.split_once(":") {
+    Some((key, value)) => {
+      let key = key.trim_end()
+      if key.is_empty() {
+        false
+      } else if value.is_empty() {
+        true
+      } else {
+        // 块映射要求冒号后面是空白；`http://...` 这种不算
+        value.has_prefix(" ")
+      }
+    }
+    None => false
+  }
+}
+
+///|
+pub impl @config.Format for YamlFormat with fn sniff(
+  _ : YamlFormat,
+  bytes : Bytes,
+) -> Bool {
+  let text = @utf8.decode(bytes) catch { _ => return false }
+  for raw in text.split("\n") {
+    let line = raw.trim_end()
+    if line.is_empty() {
+      continue
+    }
+    let top = line.trim_start()
+    if top.length() != line.length() {
+      continue // 缩进行不是顶层
+    }
+    if top.has_prefix("#") ||
+      top.has_prefix("%") ||
+      top.equal_to_string("---") ||
+      top.equal_to_string("...") {
+      continue
+    }
+    if top.equal_to_string("-") || top.has_prefix("- ") {
+      return true
+    }
+    if yaml_key_line(top) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+pub extend YamlFormat with @config.Format::{decode_path, suffixes, sniff}
+
+///|
 /// YAML 文本 → `Value`。
 fn parse_yaml(text : String) -> @config.Value raise @config.ConfigError {
   let docs = @yaml.Yaml::load_from_string(text) catch {
