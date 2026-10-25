@@ -15,6 +15,8 @@
   - [`decisions.md`](decisions/decisions.md) —— 包名、跨包方法、Bytes、JSON 数值、CBOR 选型、来源追踪（`OriginSite` / `KeyPath`）与合并规则、外部 Source、字符串比较、校验
 - `plan/` —— 计划文档，讲「接下来做什么」
   - [`roadmap.md`](plan/roadmap.md) —— 待实现的方向、进度
+  - [`format-detect.md`](plan/format-detect.md) —— 自动发现格式：后缀、内容判断、候选列表
+  - [`hot-reload.md`](plan/hot-reload.md) —— 热更新：`LiveConfig`、快照替换、轮询与回调
 - `conventions/` —— 项目规范，讲「怎么做」
   - [`testing.md`](conventions/testing.md) —— 测试写法
 
