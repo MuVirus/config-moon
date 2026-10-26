@@ -8,13 +8,3 @@ import {
   "MuVirus/moonfig/core" @config,
   "moonbitlang/core/env",
 } for "test"
-
-options(
-  link: {
-    "native": {
-      "cc": "C:/Users/yiliu/mingw64/bin/gcc.exe",
-      "cc-flags": "-DMOONBIT",
-      "cc-link-flags": "-s",
-    },
-  },
-)
