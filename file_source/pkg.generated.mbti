@@ -14,7 +14,6 @@ import {
 pub struct FileSource {
   path : String
   format : &@core.Format
-  detector : @format_detect.Detector?
 }
 pub fn FileSource::auto(String, @format_detect.Detector) -> Self
 pub fn FileSource::collect(Self) -> @core.Layer raise @core.ConfigError
@@ -22,6 +21,7 @@ pub fn FileSource::describe(Self, @core.KeyPath) -> String
 pub fn FileSource::kind(Self) -> @core.SourceKind
 pub fn FileSource::locator(Self) -> &@core.Locator?
 pub fn FileSource::new(String, &@core.Format) -> Self
+pub fn FileSource::raw_locator(Self) -> &@core.Locator?
 pub fn FileSource::read(Self) -> Bytes raise @core.ConfigError
 pub impl @core.Locator for FileSource
 pub impl @core.OriginSite for FileSource

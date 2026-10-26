@@ -13,6 +13,7 @@ import {
 pub struct CborFormat {
 }
 pub fn CborFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn CborFormat::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
 pub fn CborFormat::new() -> Self
 pub fn CborFormat::sniff(Self, Bytes) -> Bool
 pub fn CborFormat::suffixes(Self) -> Array[String]

@@ -10,7 +10,7 @@ pub fn[T : FromJson + Validate] extract_validated_from(cfg : Config, path : Stri
 
 `extract` 提取整棵树，`extract_from` 先按键取子树再提取；后者是自由函数，因为方法不能跨 package（见 [decisions.md](../decisions/decisions.md#2-方法不能跨包)）。`extract_validated_from` 在提取后调用结构体自己的 `Validate`，见 [validate.md](validate.md)。
 
-实现是 `@json.from_json(to_json(v))`，但整数映射有一个绕不过去的矛盾：
+实现主线是 `@json.from_json(to_json(v))`，但整数映射有一个绕不过去的矛盾：
 
 | 字段类型 | MoonBit 标准库的 `from_json` 只认 |
 |---|---|
@@ -18,6 +18,8 @@ pub fn[T : FromJson + Validate] extract_validated_from(cfg : Config, path : Stri
 | `Int64` / `UInt64` | `Json::String`（只吃字符串） |
 
 `extract[T : FromJson]` 只有值级约束，看不到字段类型，所以一棵 Json 树不可能同时满足两者。取舍是：**统一映射成数字**，64 位字段用包装类型。
+
+标准库的 `Int::from_json` 对数字只做范围检查，`3.14` 会被 `to_int()` 截断成 `3`。`extract` 在正常解码成功后，如果原值树里有浮点，会再用一棵把所有浮点换成字符串 `"NaN"` 的探针树解一次：`Double` / `Float` 接受 `"NaN"`，整数类型不接受，因此能定位到「浮点想进整数字段」并报 `TypeMismatch`。没有浮点的配置不会多跑这一遍，`Double` 字段仍返回原值，不受探针影响。
 
 | ValueKind | → Json |
 |---|---|

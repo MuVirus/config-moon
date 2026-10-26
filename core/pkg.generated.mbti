@@ -36,6 +36,7 @@ pub struct BytesSource {
 pub fn BytesSource::collect(Self) -> Layer raise ConfigError
 pub fn BytesSource::kind(Self) -> SourceKind
 pub fn BytesSource::new(Bytes, &Format) -> Self
+pub fn BytesSource::raw_locator(Self) -> &Locator?
 pub impl Source for BytesSource
 
 pub struct Config {
@@ -79,9 +80,6 @@ pub fn Layer::new(Value, &OriginSite?) -> Self
 pub fn Layer::untracked(Value) -> Self
 
 pub struct LiveConfig {
-  mut current : Config
-  mut locators : Array[&Locator]
-  mut snapshots : Array[Bytes]
   // private fields
 }
 pub fn LiveConfig::current(Self) -> Config
@@ -94,6 +92,7 @@ pub struct MemorySource {
 pub fn MemorySource::collect(Self) -> Layer raise ConfigError
 pub fn MemorySource::kind(Self) -> SourceKind
 pub fn MemorySource::new(Value) -> Self
+pub fn MemorySource::raw_locator(Self) -> &Locator?
 pub impl Source for MemorySource
 
 pub(all) enum MergeRule {
@@ -139,6 +138,7 @@ pub struct StringSource {
 pub fn StringSource::collect(Self) -> Layer raise ConfigError
 pub fn StringSource::kind(Self) -> SourceKind
 pub fn StringSource::new(String, &Format) -> Self
+pub fn StringSource::raw_locator(Self) -> &Locator?
 pub impl Source for StringSource
 
 pub struct Value {
@@ -185,6 +185,7 @@ pub(open) trait Format {
   fn decode(Self, Bytes) -> Value raise ConfigError
   fn suffixes(Self) -> Array[String] = _
   fn sniff(Self, Bytes) -> Bool = _
+  fn decode_path(Self, String, Bytes) -> Value raise ConfigError = _
 }
 
 pub(open) trait Locator {
@@ -200,6 +201,7 @@ pub(open) trait OriginSite {
 pub(open) trait Source {
   fn collect(Self) -> Layer raise ConfigError
   fn kind(Self) -> SourceKind = _
+  fn raw_locator(Self) -> &Locator? = _
 }
 
 pub(open) trait Validate {

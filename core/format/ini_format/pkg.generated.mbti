@@ -13,6 +13,7 @@ import {
 pub struct IniFormat {
 }
 pub fn IniFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn IniFormat::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
 pub fn IniFormat::new() -> Self
 pub fn IniFormat::sniff(Self, Bytes) -> Bool
 pub fn IniFormat::suffixes(Self) -> Array[String]

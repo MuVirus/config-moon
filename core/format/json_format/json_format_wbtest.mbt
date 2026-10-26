@@ -23,11 +23,100 @@ struct NeedsBlob {
 pub extend NeedsBlob with @json.FromJson::{from_json}
 
 ///|
+/// 嵌套结构，用来验证 MissingKey 会拼上父路径
+struct NestedNeedsHost {
+  db : NeedsHost
+} derive(@json.FromJson)
+
+///|
+pub extend NestedNeedsHost with @json.FromJson::{from_json}
+
+///|
+/// 整型数组，用来验证浮点探针会递归进数组
+struct IntArrayCfg {
+  values : Array[Int32]
+} derive(@json.FromJson)
+
+///|
+pub extend IntArrayCfg with @json.FromJson::{from_json}
+
+///|
+/// 数组字段，用来验证对象/数组形状错误
+struct StringListCfg {
+  values : Array[String]
+} derive(@json.FromJson)
+
+///|
+pub extend StringListCfg with @json.FromJson::{from_json}
+
+///|
 /// `Bytes` 字段能从 `Value` 里原样提取出来
 test "extract reads bytes into a Bytes field" {
   let raw = b"\x00\x01abcd"
   let got : NeedsBlob = extract(Value::table({ "blob": Value::bytes(raw) }))
   assert_eq(got.blob, raw)
+}
+
+///|
+/// 非法 UTF-8 应该在解码阶段报 ParseError，而不是交给 JSON 解析器
+test "decode rejects invalid UTF-8" {
+  let message = try {
+    ignore(JsonFormat::new().decode(b"\xff"))
+    "没有报错"
+  } catch {
+    ConfigError::ParseError(message) => message
+    error => error.to_string()
+  }
+  assert_eq(message, "JSON 内容不是合法的 UTF-8")
+}
+
+///|
+/// sniff 跳过前导空白，空白串和标量根都不算 JSON 对象/数组
+test "sniff skips leading whitespace" {
+  let format = JsonFormat::new()
+  assert_true(format.sniff(b" \t\r\n{\"a\":1}"))
+  assert_true(format.sniff(b" \t\r\n[1]"))
+  assert_false(format.sniff(b" \t\r\n"))
+  assert_false(format.sniff(b"true"))
+}
+
+///|
+/// Json::False 也要映射成 Bool(false)
+test "json_to_value decodes false" {
+  let value = json_to_value(@json.parse("false"))
+  assert_eq(value.kind, ValueKind::Bool(false))
+}
+
+///|
+/// 嵌套字段缺失时，路径要带上父级，而不是只报字段名
+test "extract reports nested missing field" {
+  let message = try {
+    let _ : NestedNeedsHost = extract(
+      Value::table({
+        "db": Value::table({ "other": Value::int(1L) }),
+      }),
+    )
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 db.host 不存在：没有任何来源提供它")
+}
+
+///|
+/// 数组里的浮点也必须被浮点探针拦住，不能只检查表字段
+test "extract rejects float inside Int array" {
+  let value = Value::table({
+    "values": Value::array([Value::int(1L), Value::float(2.5)]),
+  })
+  assert_true(has_float(value))
+  let message = try {
+    let _ : IntArrayCfg = extract(value)
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 values.1 类型不符：期望 Int，实际 Float")
 }
 
 ///|
@@ -177,6 +266,28 @@ test "extract reports shape mismatch" {
     _ => false
   }
   assert_true(mismatch)
+}
+
+///|
+/// 对象/数组形状错误也要走 expected_name 的 Table / Array 分支
+test "extract reports object and array shape mismatches" {
+  let object_message = try {
+    let _ : NeedsHost = extract(Value::array([Value::int(1L)]))
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(object_message, "配置项 (根) 类型不符：期望 Table，实际 Array")
+
+  let array_message = try {
+    let _ : StringListCfg = extract(
+      Value::table({ "values": Value::str("not-an-array") }),
+    )
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(array_message, "配置项 values 类型不符：期望 Array，实际 Str")
 }
 
 ///|

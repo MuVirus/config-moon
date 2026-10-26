@@ -62,6 +62,15 @@ struct LegacyCfg {
 pub extend LegacyCfg with @json.FromJson::{from_json}
 
 ///|
+/// 浮点字段仍然要能正常提取；浮点探针不能把 `Double` 也拦掉
+struct RatioCfg {
+  ratio : Double
+} derive(@json.FromJson)
+
+///|
+pub extend RatioCfg with @json.FromJson::{from_json}
+
+///|
 /// 整数值取 `Int`，带小数的取 `Float`
 test "json source splits int and float" {
   let cfg = Config::new()
@@ -163,6 +172,33 @@ test "extract reports key and types" {
     error => error.to_string()
   }
   assert_eq(message, "配置项 db.port 类型不符：期望 Int，实际 Str")
+}
+
+///|
+/// 浮点提取成 `Int` 不能截断：标准库的 `Int::from_json` 会直接 `to_int()`，
+/// 库里的 `"NaN"` 探针负责把它拦下来。
+test "extract rejects float into Int field" {
+  let cfg = Config::new()
+    .add(json("{\"db\": {\"host\": \"localhost\", \"port\": 5432.7}}"))
+    .build()
+  let message = try {
+    let db : DbCfg = extract_from(cfg, "db")
+    ignore(db)
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    message, "配置项 db.port 类型不符：期望 Int，实际 Float",
+  )
+}
+
+///|
+/// 同一棵树里的 `Double` 字段不受浮点探针影响，原值照常取回。
+test "extract keeps fractional Double field" {
+  let cfg = Config::new().add(json("{\"ratio\": 1.25}")).build()
+  let ratio : RatioCfg = extract_from(cfg, "")
+  assert_eq(ratio.ratio, 1.25)
 }
 
 ///|

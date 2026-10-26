@@ -17,6 +17,7 @@ pub fn EnvSource::all() -> Self
 pub fn EnvSource::collect(Self) -> @core.Layer raise @core.ConfigError
 pub fn EnvSource::kind(Self) -> @core.SourceKind
 pub fn EnvSource::new(String) -> Self
+pub fn EnvSource::raw_locator(Self) -> &@core.Locator?
 pub impl @core.Source for EnvSource
 
 // Type aliases

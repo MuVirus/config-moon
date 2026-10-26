@@ -78,7 +78,7 @@ cfg.get_int("db.port")      // 6543          ← overridden by the second
 
 ### Type safety
 
-Reads match the value's actual type exactly; no implicit conversion is performed:
+Reads match the value's actual type exactly; no implicit conversion is performed. A JSON float extracted into an integer field is a type mismatch, never a truncation:
 
 ```moonbit nocheck
 using @config {type Config, type StringSource}

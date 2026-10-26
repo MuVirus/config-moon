@@ -73,7 +73,7 @@ cfg.get_int("db.port")      // 6543          ← 第二个来源覆盖
 
 ### 类型安全
 
-取值按实际类型严格匹配，不做隐式转换：
+取值按实际类型严格匹配，不做隐式转换。JSON 里的浮点数提取到整数字段会报类型不符，不会截断成整数部分：
 
 ```moonbit nocheck
 using @config {type Config, type StringSource}

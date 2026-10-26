@@ -174,9 +174,62 @@ fn[T : @json.FromJson] extract_at(
   v : @config.Value,
   prefix : String,
 ) -> T raise @config.ConfigError {
-  @json.from_json(to_json(v)) catch {
+  let decoded : T = @json.from_json(to_json(v)) catch {
     @json.JsonDecodeError((path, message)) =>
       raise explain(v, prefix, path, message)
+  }
+  // 标准库的 `Int::from_json` 对 `Json::Number` 只做范围检查，小数会被
+  // `to_int()` 直接截断。这里用 `"NaN"` 探针补上这一层检查：
+  // `Double` / `Float` 接受字符串 `"NaN"`，整数类型只接受数字，会报错。
+  // 只有原值里确实有浮点时才多跑一遍，纯整数配置不受影响。
+  if has_float(v) {
+    let probe : T? = Some(@json.from_json(to_probe_json(v))) catch {
+      @json.JsonDecodeError((path, message)) => {
+        let expected = expected_name(message)
+        if is_integer_name(expected) {
+          raise explain(v, prefix, path, message)
+        }
+        // 探针失败但不是整数字段：可能是不接受 "NaN" 的自定义类型，
+        // 保持标准库原本的提取结果。
+        None
+      }
+    }
+    ignore(probe)
+  }
+  decoded
+}
+
+///|
+/// 树里有没有 `Float`。有才需要跑浮点探针。
+fn has_float(v : @config.Value) -> Bool {
+  match v.kind {
+    @config.ValueKind::Float(_) => true
+    @config.ValueKind::Array(items) => {
+      for item in items {
+        if has_float(item) {
+          return true
+        }
+      }
+      false
+    }
+    @config.ValueKind::Table(table) => {
+      for _key, item in table {
+        if has_float(item) {
+          return true
+        }
+      }
+      false
+    }
+    _ => false
+  }
+}
+
+///|
+/// 探针报出来的期望类型是不是整数。只拦这类错误，避免误伤自定义浮点包装。
+fn is_integer_name(name : String) -> Bool {
+  match name {
+    "Int" | "Int32" | "Int64" | "UInt" | "UInt32" | "UInt64" => true
+    _ => false
   }
 }
 

@@ -148,22 +148,45 @@ fn int64_of(literal : String) -> Int64 raise @config.ConfigError {
 /// `Bytes` 走 core 的 `ToJson for Bytes`：可打印 ASCII 直通，其余写成
 /// `\xHH`，和 `FromJson for Bytes` 读的是同一套格式，两头对称。
 pub fn to_json(v : @config.Value) -> Json {
+  to_json_with_float_mode(v, false)
+}
+
+///|
+/// 内部转换：`float_probe` 为真时，所有浮点都写成 JSON 字符串 `"NaN"`。
+///
+/// 这是提取阶段用来识别「浮点落进整数字段」的探针：标准库的
+/// `Double::from_json` / `Float::from_json` 接受字符串 `"NaN"`，而
+/// `Int::from_json` / `UInt::from_json` 只接受数字，会拒绝它。
+/// 普通 `to_json` 不受影响。
+fn to_json_with_float_mode(v : @config.Value, float_probe : Bool) -> Json {
   match v.kind {
     @config.ValueKind::Null => Json::null()
     @config.ValueKind::Bool(b) => Json::boolean(b)
     @config.ValueKind::Int(i) => Json::number(i.to_double(), repr=i.to_string())
-    @config.ValueKind::Float(f) => Json::number(f)
+    @config.ValueKind::Float(f) =>
+      if float_probe {
+        Json::string("NaN")
+      } else {
+        Json::number(f)
+      }
     @config.ValueKind::Str(s) => Json::string(s)
     @config.ValueKind::Bytes(b) => @json.to_json(b)
-    @config.ValueKind::Array(arr) => Json::array(arr.map(fn(x) { to_json(x) }))
+    @config.ValueKind::Array(arr) =>
+      Json::array(arr.map(fn(x) { to_json_with_float_mode(x, float_probe) }))
     @config.ValueKind::Table(t) => {
       let obj = Map([], capacity=t.capacity())
       for k, x in t {
-        obj[k] = to_json(x)
+        obj[k] = to_json_with_float_mode(x, float_probe)
       }
       Json::object(obj)
     }
   }
+}
+
+///|
+/// 提取阶段的浮点探针树，见 `to_json_with_float_mode`。
+fn to_probe_json(v : @config.Value) -> Json {
+  to_json_with_float_mode(v, true)
 }
 
 // extract / extract_from 在 extract.mbt：那里还要处理 64 位包装类型和错误翻译

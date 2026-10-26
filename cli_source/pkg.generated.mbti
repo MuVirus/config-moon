@@ -17,6 +17,7 @@ pub fn CliSource::collect(Self) -> @core.Layer raise @core.ConfigError
 pub fn CliSource::from_args(Array[String]) -> Self
 pub fn CliSource::kind(Self) -> @core.SourceKind
 pub fn CliSource::new() -> Self
+pub fn CliSource::raw_locator(Self) -> &@core.Locator?
 pub impl @core.Source for CliSource
 
 // Type aliases

@@ -13,6 +13,7 @@ import {
 pub struct XmlFormat {
 }
 pub fn XmlFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn XmlFormat::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
 pub fn XmlFormat::new() -> Self
 pub fn XmlFormat::sniff(Self, Bytes) -> Bool
 pub fn XmlFormat::suffixes(Self) -> Array[String]

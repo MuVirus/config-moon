@@ -13,6 +13,7 @@ import {
 pub struct YamlFormat {
 }
 pub fn YamlFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn YamlFormat::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
 pub fn YamlFormat::new() -> Self
 pub fn YamlFormat::sniff(Self, Bytes) -> Bool
 pub fn YamlFormat::suffixes(Self) -> Array[String]

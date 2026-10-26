@@ -33,6 +33,7 @@ pub impl @json.FromJson for Int64Text
 pub struct JsonFormat {
 }
 pub fn JsonFormat::decode(Self, Bytes) -> @core.Value raise @core.ConfigError
+pub fn JsonFormat::decode_path(Self, String, Bytes) -> @core.Value raise @core.ConfigError
 pub fn JsonFormat::new() -> Self
 pub fn JsonFormat::sniff(Self, Bytes) -> Bool
 pub fn JsonFormat::suffixes(Self) -> Array[String]

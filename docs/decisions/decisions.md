@@ -38,7 +38,7 @@
 | `@json.parse("30")` / `@json.parse("1.5")` | `repr` 都是 `None` | **常见情况拿不到原文**，按有无小数点分的写法不成立 |
 | `@json.from_json(@json.parse("\"1.5\""))` 到 `Double` | 失败 `Double::from_json: expected number` | 字符串自动转数字在 Json 层做不到 |
 | `@json.from_json(@json.parse("\"true\""))` 到 `Bool` | 失败 `Bool::from_json: expected boolean` | 同上 |
-| `@json.from_json(@json.parse("5432.7"))` 到 `Int` | 成功，得 `5432` | **静默截断**，不报错 |
+| `@json.from_json(@json.parse("5432.7"))` 到 `Int` | 标准库成功，得 `5432` | **标准库会静默截断**；`extract` 用 `"NaN"` 探针把它改成 `TypeMismatch` |
 
 > **2026-09 更正（实现时实测）**
 >
