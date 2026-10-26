@@ -21,6 +21,18 @@ pub fn[T : FromJson + Validate] extract_validated_from(cfg : Config, path : Stri
 
 标准库的 `Int::from_json` 对数字只做范围检查，`3.14` 会被 `to_int()` 截断成 `3`。`extract` 在正常解码成功后，如果原值树里有浮点，会再用一棵把所有浮点换成字符串 `"NaN"` 的探针树解一次：`Double` / `Float` 接受 `"NaN"`，整数类型不接受，因此能定位到「浮点想进整数字段」并报 `TypeMismatch`。没有浮点的配置不会多跑这一遍，`Double` 字段仍返回原值，不受探针影响。
 
+JSON 解码打开了 `preserve_number_repr=true`，所以 `1.0`、`1e2`、`-0.0` 这些「值是整数、写法是浮点」的数字也保持 `Float`，同样会被探针拦住，不会因为数值完整就绕过整数字段检查。
+
+字符串这一侧也要补探测，因为标准库有些 `FromJson` 会把字符串当成别的形状：
+
+| 标准库行为 | 问题 | 探针处理 |
+|---|---|---|
+| `Double` / `Float` 接受字符串 `"NaN"`、`"Infinity"`、`"-Infinity"` | 字符串来源变成浮点 | 把所有 `Str` 换成普通标记再解一次，报期望 `Float` 就翻成 `TypeMismatch` |
+| `Int64` / `UInt64` 直接解析字符串 | 字符串来源变成 64 位整数，绕过 `Int64Text` | 同上，报期望 `Int64` / `UInt64` 就翻成 `TypeMismatch` |
+| `Bytes` 字段只接受字符串 | 字符串来源变成字节串 | 标记里带换行，`Bytes::from_json` 会拒绝它 |
+
+反方向也有一个坑：`Bytes` 和 `Str` 都映射成 `Json::String`，正常解码分不出。`extract` 逐个把 `Bytes` 节点换成一个非字符串值再解一次：字节字段会报期望 `Bytes`（合法），字符串字段会报期望 `String`，说明字节来源被当成了字符串，翻成 `TypeMismatch`。换成非字符串值而不是 `null`，是为了避免可选类型把 `null` 当成缺省值直接放过。这些探针只在树里出现对应形状时运行，纯字符串 / 纯整数配置不多跑。
+
 | ValueKind | → Json |
 |---|---|
 | `Int` | `Json::number(i.to_double(), repr=i.to_string())` |

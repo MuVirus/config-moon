@@ -72,6 +72,26 @@ struct UInt64Value {
 pub extend UInt64Value with @json.FromJson::{from_json}
 
 ///|
+/// 只用来验证直接写 `Int64` 时字符串来源也会被拒绝
+#warnings("-unused_field")
+struct RawInt64Value {
+  value : Int64
+} derive(@json.FromJson)
+
+///|
+pub extend RawInt64Value with @json.FromJson::{from_json}
+
+///|
+/// 只用来验证直接写 `UInt64` 时字符串来源也会被拒绝
+#warnings("-unused_field")
+struct RawUInt64Value {
+  value : UInt64
+} derive(@json.FromJson)
+
+///|
+pub extend RawUInt64Value with @json.FromJson::{from_json}
+
+///|
 /// 浮点数提取成 `Int` 必须报错，不能静默截断成整数部分。
 test "JSON float cannot be extracted as Int" {
   let v = json_value(b"{\"value\": 3.14}")
@@ -89,6 +109,17 @@ test "negative JSON float cannot be extracted as Int" {
     int_extract_result(v),
     "配置项 value 类型不符：期望 Int，实际 Float",
   )
+}
+
+///|
+/// 值是整数、但写法是浮点（小数点或指数）时仍是 Float，不能进 Int 字段。
+test "integral JSON floats cannot be extracted as Int" {
+  for text in [b"{\"value\": 1.0}", b"{\"value\": 1e2}", b"{\"value\": -0.0}"] {
+    assert_eq(
+      int_extract_result(json_value(text)),
+      "配置项 value 类型不符：期望 Int，实际 Float",
+    )
+  }
 }
 
 ///|
@@ -183,6 +214,53 @@ test "string cannot be extracted as Double" {
 }
 
 ///|
+/// 标准库的 `Double::from_json` 接受字符串 `"NaN"` / `"Infinity"` / `"-Infinity"`，
+/// 但配置里的字符串来源不该因此变成浮点。
+test "string special floats cannot be extracted as Double" {
+  for
+    text in [
+      b"{\"value\": \"NaN\"}", b"{\"value\": \"Infinity\"}", b"{\"value\": \"-Infinity\"}",
+    ] {
+    let v = json_value(text)
+    let message = try {
+      let got : FloatValue = @json_format.extract(v)
+      "没有报错：value = \{got.value}"
+    } catch {
+      error => error.to_string()
+    }
+    assert_eq(
+      message, "配置项 value 类型不符：期望 Float，实际 Str",
+    )
+  }
+}
+
+///|
+/// 直接写 `Int64` / `UInt64` 时，标准库会解析字符串；这里也必须拒绝，
+/// 否则字符串来源会绕过 `Int64Text` 的检查。
+test "string cannot be extracted as raw Int64 or UInt64" {
+  let v = json_value(b"{\"value\": \"5432\"}")
+  let int_message = try {
+    let got : RawInt64Value = @json_format.extract(v)
+    "没有报错：value = \{got.value}"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    int_message, "配置项 value 类型不符：期望 Int64，实际 Str",
+  )
+
+  let uint_message = try {
+    let got : RawUInt64Value = @json_format.extract(v)
+    "没有报错：value = \{got.value}"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    uint_message, "配置项 value 类型不符：期望 UInt64，实际 Str",
+  )
+}
+
+///|
 /// `Int64Text` 只认整数形状：字符串和浮点都不收。
 test "Int64Text rejects string and float sources" {
   let from_string = json_value(b"{\"value\": \"9007199254740993\"}")
@@ -205,5 +283,16 @@ test "Int64Text rejects string and float sources" {
   }
   assert_eq(
     float_message, "配置项 value 类型不符：期望 Int64，实际 Float",
+  )
+
+  let from_integral_float = json_value(b"{\"value\": 1.0}")
+  let integral_float_message = try {
+    let got : Int64Value = @json_format.extract(from_integral_float)
+    "没有报错：value = \{got.value.to_int64()}"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    integral_float_message, "配置项 value 类型不符：期望 Int64，实际 Float",
   )
 }

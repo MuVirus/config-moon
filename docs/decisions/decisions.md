@@ -35,21 +35,25 @@
 | 实测 | 结果 | 影响 |
 |---|---|---|
 | `@json.parse("9007199254740993")` | `Number(9007199254740992, repr=Some(9007199254740993))` | 超出精确整数范围时 `repr` 留着原文，靠它还原大整数 |
-| `@json.parse("30")` / `@json.parse("1.5")` | `repr` 都是 `None` | **常见情况拿不到原文**，按有无小数点分的写法不成立 |
+| `@json.parse("30")` / `@json.parse("1.5")`（默认） | `repr` 都是 `None` | 默认不保留原文，无法按写法区分整数和浮点 |
+| `@json.parse("1.0", preserve_number_repr=true)` | `Number(1.0, repr=Some("1.0"))` | 打开选项后每个数字都有原文，按写法分流才成立 |
 | `@json.from_json(@json.parse("\"1.5\""))` 到 `Double` | 失败 `Double::from_json: expected number` | 字符串自动转数字在 Json 层做不到 |
 | `@json.from_json(@json.parse("\"true\""))` 到 `Bool` | 失败 `Bool::from_json: expected boolean` | 同上 |
 | `@json.from_json(@json.parse("5432.7"))` 到 `Int` | 标准库成功，得 `5432` | **标准库会静默截断**；`extract` 用 `"NaN"` 探针把它改成 `TypeMismatch` |
 
-> **2026-09 更正（实现时实测）**
+> **2026-10 更正：用 `preserve_number_repr=true` 保住每个数字的写法**
 >
-> 上面第 1 行的结论只在「字面量超出 `Double` 精确整数范围（> 2^53 - 1）」时成立；
-> 标准库在常见情况（`repr` 为 `None`）已经**不保留原文**了。所以 `convert.mbt` 改成：
+> 核心库原来只在超出 `Double` 精确范围时才填 `repr`，所以 `1.0`、`1e2`
+> 这种「值是整数、写法是浮点」的数字拿不到原文，只能按数值反推成 `Int`。
+> 现在 `@json.parse` 支持 `preserve_number_repr=true`，`JsonFormat::decode`
+> 直接打开它，所有数字的原文都在 `repr` 里：
 >
-> - `repr` 有值 → 原文在手，按 `Int64` 精确解析（`@bigint`）
-> - `repr` 是 `None` → 只能看值：整数值且塞得进 `Int64` 就算整数，其余算浮点
+> - `repr` 是整数形状（没有小数点、没有 `e` / `E`）→ 按 `Int64` 精确解析
+> - 其余形状 → `Float`，包括 `1.0`、`1e2`、`-0.0`
+> - `repr` 缺失（只可能来自手工构造的 `Json`）→ 按 `Float` 处理
 >
-> 代价：`1.0`、`1e2` 这种写了小数点／指数的整数值也按整数算。
-> 反过来不会错——`5432` 一定是整数，不然 `get_int` 全都取不到。
+> 这样浮点来源不会再混进 `Int` / `Int64Text` 字段，代价是解析时多存
+> 每个数字的原文。`5432` 仍然是 `Int`，`get_int` 不受影响。
 
 ## 5. CBOR 库的选择
 

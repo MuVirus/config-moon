@@ -117,6 +117,20 @@ test "yaml over memory overrides only the same key" {
 }
 
 ///|
+/// 显式浮点标签是浮点来源，不能按整数读
+test "explicit float is not readable as Int" {
+  let cfg = Config::new().add(yaml("port: !!float 2\n")).build()
+  let message = try {
+    ignore(cfg.get_int("port"))
+    "没有报错"
+  } catch {
+    e => e.to_string()
+  }
+  assert_eq(message, "配置项 port 类型不符：期望 Int，实际 Float")
+  assert_eq(cfg.get_float("port"), 2.0)
+}
+
+///|
 /// 空文件得到空表，取值时报 MissingKey
 test "empty yaml is an empty table" {
   let cfg = Config::new().add(yaml("# 只有注释\n")).build()

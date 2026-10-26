@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn watch(@core.LiveConfig, interval? : Int, on_change? : (@core.Config) -> Unit raise @core.ConfigError, on_error? : (@core.ConfigError) -> Unit raise @core.ConfigError) -> Watcher
+pub fn watch(@core.LiveConfig, interval? : Int32, on_change? : (@core.Config) -> Unit raise @core.ConfigError, on_error? : (@core.ConfigError) -> Unit raise @core.ConfigError) -> Watcher
 
 // Errors
 
@@ -14,7 +14,7 @@ pub fn watch(@core.LiveConfig, interval? : Int, on_change? : (@core.Config) -> U
 pub struct Watcher {
   // private fields
 }
-pub fn Watcher::interval(Self) -> Int
+pub fn Watcher::interval(Self) -> Int32
 pub fn Watcher::is_stopped(Self) -> Bool
 pub fn Watcher::poll(Self) -> Bool
 pub fn Watcher::stop(Self) -> Unit

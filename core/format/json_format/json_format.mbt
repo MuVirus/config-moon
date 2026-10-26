@@ -17,7 +17,9 @@ pub impl @config.Format for JsonFormat with fn decode(
     _ =>
       raise @config.ConfigError::ParseError("JSON 内容不是合法的 UTF-8")
   }
-  let json = @json.parse(text) catch {
+  // 保留每个数字的原文：核心库默认只在超出 Double 精确范围时才留 `repr`，
+  // 那会把 `1.0`、`1e2` 这种浮点写法误判成整数。
+  let json = @json.parse(text, preserve_number_repr=true) catch {
     e => raise @config.ConfigError::ParseError(e.to_string())
   }
   json_to_value(json)
@@ -53,14 +55,14 @@ pub impl @config.Format for JsonFormat with fn sniff(
 pub extend JsonFormat with @config.Format::{decode_path, suffixes, sniff}
 
 ///|
-/// `Json` → `Value`：数字分成 `Int` / `Float`，整数一律 `Int64`。
+/// `Json` → `Value`：数字按字面量形状分成 `Int` / `Float`，整数一律 `Int64`。
 ///
-/// core 的 `Json::Number` 带一个 `repr` 字段，**只在字面量超出 `Double`
-/// 的精确整数范围（> 2^53 - 1）时**才留着原文，常见情况是 `None`。
-/// 所以这里分两条路：
+/// `decode` 用 `preserve_number_repr=true` 解析，每个数字的原文都留在
+/// `Json::Number` 的 `repr` 里。所以 `1.0`、`1e2` 不会因为数值恰好是整数
+/// 就被当成 `Int`：有没有小数点／指数决定形状。
 ///
-/// - `repr` 有值 → 原文在手，能精确解析
-/// - `repr` 是 `None` → 原文已经拿不回来，只能看值本身：整数值当整数
+/// `repr` 缺失只可能来自手工构造的 `Json`。拿不到原文时一律按浮点处理：
+/// 宁可让整数读取报类型不符，也不能把浮点静默当成整数。
 fn json_to_value(json : Json) -> @config.Value raise @config.ConfigError {
   match json {
     Json::Null => @config.Value::null()
@@ -69,19 +71,13 @@ fn json_to_value(json : Json) -> @config.Value raise @config.ConfigError {
     Json::Number(n, repr~) =>
       match repr {
         Some(literal) =>
-          // 两条路都会填 repr，必须分开处理：
-          // 整数超范围 → 按 Int64 精确解析；浮点超范围 → n 已是 ±infinity 哨兵
+          // 整数形状按 Int64 精确解析（大整数不丢）；浮点形状直接保留 Double
           if is_integer_literal(literal) {
             @config.Value::int(int64_of(literal))
           } else {
             @config.Value::float(n)
           }
-        None =>
-          if is_int64(n) {
-            @config.Value::int(n.to_int64())
-          } else {
-            @config.Value::float(n)
-          }
+        None => @config.Value::float(n)
       }
     Json::String(s) => @config.Value::str(s)
     Json::Array(arr) => @config.Value::array(arr.map(json_to_value))
@@ -93,18 +89,6 @@ fn json_to_value(json : Json) -> @config.Value raise @config.ConfigError {
       @config.Value::table(table)
     }
   }
-}
-
-///|
-/// 整数值、且塞得进 `Int64` 才算整数。
-///
-/// 已知取舍：原文没了，`1.0`、`1e2` 这种写了小数点／指数的整数值也按整数算。
-/// 反过来不会错——`5432` 一定是整数，不然 `get_int` 全都取不到。
-fn is_int64(n : Double) -> Bool {
-  !n.is_nan() &&
-  n == n.trunc() &&
-  n >= -9223372036854775808.0 &&
-  n < 9223372036854775808.0
 }
 
 ///|

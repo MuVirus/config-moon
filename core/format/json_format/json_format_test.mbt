@@ -86,6 +86,20 @@ test "json source splits int and float" {
 }
 
 ///|
+/// `1.0` 这种整数值的浮点写法仍然按 Float 存，`get_int` 不能把它当整数。
+test "integral float is not readable as Int" {
+  let cfg = Config::new().add(json("{\"port\": 1.0}")).build()
+  let message = try {
+    ignore(cfg.get_int("port"))
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 port 类型不符：期望 Int，实际 Float")
+  assert_eq(cfg.get_float("port"), 1.0)
+}
+
+///|
 /// 坏文本报 ParseError，别崩
 test "bad json raises ParseError" {
   let failed = try {

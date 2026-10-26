@@ -161,23 +161,27 @@ fn yaml_to_value(y : @yaml.Yaml) -> @config.Value raise @config.ConfigError {
 }
 
 ///|
-/// 浮点值里混着「整数溢出 Int64，被库降级成 Double」的情况。
-/// 原文还是整数形状就按 `Int64` 解析，塞不下就报错，不静默丢精度。
+/// `Yaml::Real` 有两种来源：写了小数点／指数的浮点，以及「整数溢出 `Int64`，
+/// 被库降级成 `Double`」。
+///
+/// 能塞进 `Int64` 的整数形状只可能来自显式的 `!!float 2`：普通整数在 YAML
+/// 库里先走 `Integer` 分支，不会进到这里。所以这里一律保留 `Float`，不能拿
+/// 原文的整数形状反推成 `Int`——那会让浮点来源混进整数字段。
+///
+/// 塞不下的整数形状仍然报错，不静默丢精度。
 fn real_to_value(
   d : Double,
   repr : String,
 ) -> @config.Value raise @config.ConfigError {
   if is_int_literal(repr) {
-    let i = @string.parse_int64(repr) catch {
+    let _ = @string.parse_int64(repr) catch {
       _ =>
         raise @config.ConfigError::ParseError(
           "整数 \{repr} 超出 Int64 范围",
         )
     }
-    @config.Value::int(i)
-  } else {
-    @config.Value::float(d)
   }
+  @config.Value::float(d)
 }
 
 ///|

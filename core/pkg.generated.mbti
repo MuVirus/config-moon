@@ -8,7 +8,7 @@ import {
 // Values
 pub fn check_int_range(KeyPath, Int64, Int64, Int64) -> Unit raise ConfigError
 
-pub fn check_string_len(KeyPath, String, Int, Int) -> Unit raise ConfigError
+pub fn check_string_len(KeyPath, String, Int32, Int32) -> Unit raise ConfigError
 
 // Errors
 pub(all) suberror ConfigError {
@@ -118,7 +118,7 @@ pub fn Rule::allowed_keys(String, Array[String]) -> Self
 pub fn Rule::custom(String, String, (Value) -> String?) -> Self
 pub fn Rule::int_range(String, Int64, Int64) -> Self
 pub fn Rule::one_of(String, Array[String]) -> Self
-pub fn Rule::string_len(String, Int, Int) -> Self
+pub fn Rule::string_len(String, Int32, Int32) -> Self
 
 pub(all) enum SourceKind {
   Memory

@@ -62,6 +62,13 @@ test "float shapes" {
 }
 
 ///|
+/// 显式的浮点标签即使原文是整数形状也保持 Float
+test "explicit float tag stays Float" {
+  let v = parse_yaml("a: !!float 2\nb: !!float 2.0\n")
+  assert_eq(v, Value::table({ "a": Value::float(2.0), "b": Value::float(2.0) }))
+}
+
+///|
 /// NaN 不能用相等比较，单独断言
 test "nan" {
   let v = parse_yaml("e: .nan\n")

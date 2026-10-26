@@ -58,6 +58,39 @@ test "extract reads bytes into a Bytes field" {
 }
 
 ///|
+/// 字符串来源不能提取到 `Bytes` 字段，即使内容看起来像字节编码
+test "string is not extracted as Bytes" {
+  let message = try {
+    let _ : NeedsBlob = extract(Value::table({ "blob": Value::str("hello") }))
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 blob 类型不符：期望 Bytes，实际 Str")
+}
+
+///|
+/// 字节来源也不能提取到 `String` 字段
+test "Bytes are not extracted as String" {
+  let message = try {
+    let _ : NeedsHost = extract(
+      Value::table({ "host": Value::bytes(b"hello") }),
+    )
+    "没有报错"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(message, "配置项 host 类型不符：期望 Str，实际 Bytes")
+}
+
+///|
+/// `"NaN"` 这种特殊浮点字符串在 `String` 字段里仍然是字符串
+test "special float strings stay strings" {
+  let got : NeedsHost = extract(Value::table({ "host": Value::str("NaN") }))
+  assert_eq(got.host, "NaN")
+}
+
+///|
 /// 非法 UTF-8 应该在解码阶段报 ParseError，而不是交给 JSON 解析器
 test "decode rejects invalid UTF-8" {
   let message = try {
@@ -92,15 +125,15 @@ test "json_to_value decodes false" {
 test "extract reports nested missing field" {
   let message = try {
     let _ : NestedNeedsHost = extract(
-      Value::table({
-        "db": Value::table({ "other": Value::int(1L) }),
-      }),
+      Value::table({ "db": Value::table({ "other": Value::int(1L) }) }),
     )
     "没有报错"
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 db.host 不存在：没有任何来源提供它")
+  assert_eq(
+    message, "配置项 db.host 不存在：没有任何来源提供它",
+  )
 }
 
 ///|
@@ -116,7 +149,9 @@ test "extract rejects float inside Int array" {
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 values.1 类型不符：期望 Int，实际 Float")
+  assert_eq(
+    message, "配置项 values.1 类型不符：期望 Int，实际 Float",
+  )
 }
 
 ///|
@@ -124,6 +159,7 @@ test "extract rejects float inside Int array" {
 test "json_to_value" {
   let json = @json.parse(
     "{\"i\": -42, \"f\": 1.5, \"t\": true, \"big\": 9007199254740993, \"n\": null, \"a\": [1, \"x\"]}",
+    preserve_number_repr=true,
   )
   let value = json_to_value(json)
   assert_eq(value.get_path("i").kind, ValueKind::Int(-42L))
@@ -138,21 +174,36 @@ test "json_to_value" {
 }
 
 ///|
-/// 原文丢了只能看值：写了小数点／指数的整数值也按整数算（已知取舍）
-test "json_to_value integral floats" {
+/// 有没有小数点／指数决定形状：值是整数也必须留作 Float
+test "json_to_value keeps integral floats as Float" {
   let value = json_to_value(
-    @json.parse("{\"a\": 1.0, \"b\": 1e2, \"c\": -0.5e1}"),
+    @json.parse(
+      "{\"a\": 1.0, \"b\": 1e2, \"c\": -0.5e1, \"d\": -0.0}",
+      preserve_number_repr=true,
+    ),
   )
-  assert_eq(value.get_path("a").kind, ValueKind::Int(1L))
-  assert_eq(value.get_path("b").kind, ValueKind::Int(100L))
-  assert_eq(value.get_path("c").kind, ValueKind::Int(-5L))
+  assert_eq(value.get_path("a").kind, ValueKind::Float(1.0))
+  assert_eq(value.get_path("b").kind, ValueKind::Float(100.0))
+  assert_eq(value.get_path("c").kind, ValueKind::Float(-5.0))
+  assert_eq(value.get_path("d").kind, ValueKind::Float(-0.0))
+}
+
+///|
+/// 没有原文时按浮点处理，不能靠数值是否完整反推成整数
+test "json_to_value without repr stays Float" {
+  let value = json_to_value(@json.parse("1.0"))
+  assert_eq(value.kind, ValueKind::Float(1.0))
 }
 
 ///|
 /// 塞不进 Int64 的整数直接报错，不静默截断
 test "json_to_value rejects oversized int" {
   let value = try {
-    ignore(json_to_value(@json.parse("99999999999999999999")))
+    ignore(
+      json_to_value(
+        @json.parse("99999999999999999999", preserve_number_repr=true),
+      ),
+    )
     false
   } catch {
     ConfigError::ParseError(_) => true
@@ -168,7 +219,10 @@ test "json_to_value rejects oversized int" {
 /// 而是直接 `abort` 整个进程——配置里一个数字就能把程序打崩。
 test "json_to_value handles oversized float" {
   let value = json_to_value(
-    @json.parse("{\"a\": 1e999, \"b\": -1e999, \"c\": 1.5e400}"),
+    @json.parse(
+      "{\"a\": 1e999, \"b\": -1e999, \"c\": 1.5e400}",
+      preserve_number_repr=true,
+    ),
   )
   assert_eq(value.get_path("a").kind, ValueKind::Float(@double.infinity))
   assert_eq(value.get_path("b").kind, ValueKind::Float(@double.neg_infinity))
@@ -184,18 +238,6 @@ test "is_integer_literal" {
   assert_false(is_integer_literal("1.0"))
   assert_false(is_integer_literal("1e2"))
   assert_false(is_integer_literal("1.5E-3"))
-}
-
-///|
-/// 整数值、且塞得进 Int64 才算整数
-test "is_int64" {
-  assert_true(is_int64(0.0))
-  assert_true(is_int64(-42.0))
-  assert_true(is_int64(1.0e18))
-  assert_false(is_int64(1.5))
-  assert_false(is_int64(@double.infinity))
-  assert_false(is_int64(@double.not_a_number))
-  assert_false(is_int64(1.0e19)) // 超出 Int64 范围
 }
 
 ///|
@@ -277,7 +319,9 @@ test "extract reports object and array shape mismatches" {
   } catch {
     error => error.to_string()
   }
-  assert_eq(object_message, "配置项 (根) 类型不符：期望 Table，实际 Array")
+  assert_eq(
+    object_message, "配置项 (根) 类型不符：期望 Table，实际 Array",
+  )
 
   let array_message = try {
     let _ : StringListCfg = extract(
@@ -287,7 +331,9 @@ test "extract reports object and array shape mismatches" {
   } catch {
     error => error.to_string()
   }
-  assert_eq(array_message, "配置项 values 类型不符：期望 Array，实际 Str")
+  assert_eq(
+    array_message, "配置项 values 类型不符：期望 Array，实际 Str",
+  )
 }
 
 ///|

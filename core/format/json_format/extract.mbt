@@ -196,6 +196,42 @@ fn[T : @json.FromJson] extract_at(
     }
     ignore(probe)
   }
+  // 标准库有些类型会把字符串当成别的形状：`Double` / `Float` 接受
+  // `"NaN"` / `"Infinity"` / `"-Infinity"`，`Int64` / `UInt64` 直接解析
+  // 字符串。正常解码能过，但那是字符串来源变成了数字，和严格类型不符。
+  // 把字符串换成一个普通字符串再解一次：这些类型会拒绝，字符串字段照常接受。
+  if has_str(v) {
+    let probe : T? = Some(@json.from_json(to_str_probe_json(v))) catch {
+      @json.JsonDecodeError((path, message)) => {
+        let expected = expected_name(message)
+        match expected {
+          "Float" | "Bytes" | "Int64" | "UInt64" =>
+            raise explain(v, prefix, path, message)
+          _ => None
+        }
+      }
+    }
+    ignore(probe)
+  }
+  // `Bytes` 和 `Str` 都映射成 `Json::String`，正常解码分不出来。这里逐个把
+  // Bytes 节点换成一个非字符串值：字节字段会报期望 Bytes（合法），字符串
+  // 字段会报期望 String，说明字节来源被当成字符串了。不用 `null` 是因为
+  // 可选类型可能把 `null` 当成缺省值，直接放过。
+  let bytes_paths : Array[@config.KeyPath] = []
+  collect_bytes_paths(v, @config.KeyPath::root(), bytes_paths)
+  for target in bytes_paths {
+    let probe : T? = Some(
+      @json.from_json(to_bytes_probe_json(v, @config.KeyPath::root(), target)),
+    ) catch {
+      @json.JsonDecodeError((path, message)) => {
+        if expected_name(message) == "Str" {
+          raise explain(v, prefix, path, message)
+        }
+        None
+      }
+    }
+    ignore(probe)
+  }
   decoded
 }
 
@@ -222,6 +258,107 @@ fn has_float(v : @config.Value) -> Bool {
     }
     _ => false
   }
+}
+
+///|
+/// 树里有没有 `Str`。有才需要跑字符串探针。
+fn has_str(v : @config.Value) -> Bool {
+  match v.kind {
+    @config.ValueKind::Str(_) => true
+    @config.ValueKind::Array(items) => {
+      for item in items {
+        if has_str(item) {
+          return true
+        }
+      }
+      false
+    }
+    @config.ValueKind::Table(table) => {
+      for _key, item in table {
+        if has_str(item) {
+          return true
+        }
+      }
+      false
+    }
+    _ => false
+  }
+}
+
+///|
+/// 把字符串换成普通标记的探针树，见 `extract_at`。
+///
+/// 标记不能是 `"NaN"` / `"Infinity"` / `"-Infinity"`，否则浮点类型会照收。
+/// 标记里带换行，`Bytes::from_json` 只收可打印 ASCII 和 `\xHH`，也会拒绝它：
+/// 字符串来源不能因此变成字节串。
+fn to_str_probe_json(v : @config.Value) -> Json {
+  match v.kind {
+    @config.ValueKind::Str(_) => Json::string("__moonfig_string_probe__\n")
+    @config.ValueKind::Array(items) => Json::array(items.map(to_str_probe_json))
+    @config.ValueKind::Table(table) => {
+      let obj = Map([], capacity=table.capacity())
+      for key, item in table {
+        obj[key] = to_str_probe_json(item)
+      }
+      Json::object(obj)
+    }
+    _ => to_json(v)
+  }
+}
+
+///|
+/// 收集所有 `Bytes` 节点的路径，字节探针逐个检查。
+fn collect_bytes_paths(
+  v : @config.Value,
+  current : @config.KeyPath,
+  out : Array[@config.KeyPath],
+) -> Unit {
+  match v.kind {
+    @config.ValueKind::Bytes(_) => out.push(current)
+    @config.ValueKind::Array(items) =>
+      for i, item in items {
+        collect_bytes_paths(item, current.add(i.to_string()), out)
+      }
+    @config.ValueKind::Table(table) =>
+      for key, item in table {
+        collect_bytes_paths(item, current.add(key), out)
+      }
+    _ => ()
+  }
+}
+
+///|
+/// 只有目标路径上的 `Bytes` 换成一个非字符串值，其余节点保持正常映射。
+fn to_bytes_probe_json(
+  v : @config.Value,
+  current : @config.KeyPath,
+  target : @config.KeyPath,
+) -> Json {
+  if same_key_path(current, target) {
+    return Json::boolean(true)
+  }
+  match v.kind {
+    @config.ValueKind::Array(items) => {
+      let out : Array[Json] = []
+      for i, item in items {
+        out.push(to_bytes_probe_json(item, current.add(i.to_string()), target))
+      }
+      Json::array(out)
+    }
+    @config.ValueKind::Table(table) => {
+      let obj = Map([], capacity=table.capacity())
+      for key, item in table {
+        obj[key] = to_bytes_probe_json(item, current.add(key), target)
+      }
+      Json::object(obj)
+    }
+    _ => to_json(v)
+  }
+}
+
+///|
+fn same_key_path(a : @config.KeyPath, b : @config.KeyPath) -> Bool {
+  a.segments().to_owned() == b.segments().to_owned()
 }
 
 ///|
@@ -287,7 +424,7 @@ fn expected_name(message : String) -> String {
     None => "Json"
   }
   match name {
-    "String" => "Str"
+    "String" | "View" => "Str"
     "Double" | "Float" => "Float"
     "Map" => "Table"
     "Unit" => "Null"
