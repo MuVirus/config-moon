@@ -40,9 +40,7 @@ impl @config.Source for MutableSource with fn kind(_ : MutableSource) -> @config
 }
 
 ///|
-impl @config.Source for MutableSource with fn raw_locator(
-  self : MutableSource,
-) -> &@config.Locator? {
+impl @config.Source for MutableSource with fn raw_locator(self : MutableSource) -> &@config.Locator? {
   Some(self as &@config.Locator)
 }
 
@@ -95,10 +93,7 @@ test "a failed reload keeps the old snapshot" {
 test "poll tracks file sources even when their keys are overridden" {
   let base = MutableSource::new(["base"])
   let top = MutableSource::new(["top"])
-  let live = @config.Config::new()
-    .add(base)
-    .add(top)
-    .build_live()
+  let live = @config.Config::new().add(base).add(top).build_live()
   assert_eq(live.current().get_string("text"), "top")
   base.bytes[0] = "base-changed"
   // base 的键被 top 覆盖了，来源树里看不到 base，但它仍然是文件来源

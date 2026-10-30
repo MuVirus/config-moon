@@ -28,7 +28,7 @@ pub fn FileSource::auto(
   path : String,
   detector : @format_detect.Detector,
 ) -> FileSource {
-  { path, format: detector as &@config.Format }
+  { path, format: detector as &@config.Format, }
 }
 
 ///|

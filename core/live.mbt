@@ -46,7 +46,7 @@ fn file_locators(sources : Array[&Source]) -> Array[&Locator] {
 ///|
 /// 读一轮文件字节，作为下一次 `poll` 的比较基准。
 fn read_snapshots(locators : Array[&Locator]) -> Array[Bytes] raise ConfigError {
-  locators.map((locator) => locator.read())
+  locators.map(locator => locator.read())
 }
 
 ///|

@@ -24,6 +24,7 @@ pub extend NeedsBlob with @json.FromJson::{from_json}
 
 ///|
 /// 嵌套结构，用来验证 MissingKey 会拼上父路径
+#warnings("-unused_field")
 struct NestedNeedsHost {
   db : NeedsHost
 } derive(@json.FromJson)
@@ -33,6 +34,7 @@ pub extend NestedNeedsHost with @json.FromJson::{from_json}
 
 ///|
 /// 整型数组，用来验证浮点探针会递归进数组
+#warnings("-unused_field")
 struct IntArrayCfg {
   values : Array[Int32]
 } derive(@json.FromJson)
@@ -42,6 +44,7 @@ pub extend IntArrayCfg with @json.FromJson::{from_json}
 
 ///|
 /// 数组字段，用来验证对象/数组形状错误
+#warnings("-unused_field")
 struct StringListCfg {
   values : Array[String]
 } derive(@json.FromJson)
