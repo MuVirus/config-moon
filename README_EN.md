@@ -350,17 +350,17 @@ mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`
 
 | Status | Direction | Items |
 |---|---|---|
-| 🚧 | **Core** | One value type for configuration, merge by key, read by key, read by struct, error handling |
-| 🚧 | **Many formats** | letting other formats plug in |
-| ✅ | **External sources** | Configuration files, environment variables, any combination of sources |
-| 🚧 | **Source tracking** | Which layer a key finally came from |
+| 🚧 | **Core** | One value type for configuration, merge by key, read by key, read by struct, error handling... |
+| ✅ | **Many formats** | Seven formats: JSON, INI, dotenv, YAML, TOML, XML and CBOR |
+| ✅ | **External sources** | Configuration files, environment variables, command-line flags, any combination of sources |
+| ✅ | **Source tracking** | Which layer a key finally came from |
 | ✅ | **Validation** | Required keys, value ranges, custom rules |
 | ✅ | **Format detection** | By suffix, by content, an error when neither decides |
 | ✅ | **Hot reload** | Poll for file changes, re-read and merge, notify listeners, keep the old config when a new one is bad |
+| ⬜ | **Remote configuration** | Fetch configuration files over HTTP/URL, with timeouts, retries and a local fallback. |
+| ⬜ | **Encrypted storage** | Parse and securely store encrypted values for sensitive configuration fields. |
 
 ✅ done (in maintenance)　🚧 in progress　⬜ not started
-
-The hot-reload timer is caller-driven: `Watcher::poll()` performs one round of detection, and `interval` is only a suggestion.
 
 The full item list and the trade-offs behind them live in
 [docs/plan/roadmap.md](docs/plan/roadmap.md).
