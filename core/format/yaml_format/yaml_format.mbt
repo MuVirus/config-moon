@@ -47,7 +47,7 @@ pub impl @config.Format for YamlFormat with fn decode(
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
     _ =>
-      raise @config.ConfigError::ParseError("YAML 内容不是合法的 UTF-8")
+      raise @config.ConfigError::ParseError("YAML content is not valid UTF-8")
   }
   parse_yaml(text)
 }
@@ -133,7 +133,7 @@ fn parse_yaml(text : String) -> @config.Value raise @config.ConfigError {
       }
     _ =>
       raise @config.ConfigError::ParseError(
-        "YAML 文本包含多个文档，只支持一个",
+        "YAML text contains multiple documents; only one is supported",
       )
   }
 }
@@ -156,7 +156,9 @@ fn yaml_to_value(y : @yaml.Yaml) -> @config.Value raise @config.ConfigError {
     }
     @yaml.Yaml::Null => @config.Value::null()
     @yaml.Yaml::BadValue =>
-      raise @config.ConfigError::ParseError("YAML 里有无法表示的值")
+      raise @config.ConfigError::ParseError(
+        "YAML contains a value that cannot be represented",
+      )
   }
 }
 
@@ -177,7 +179,7 @@ fn real_to_value(
     let _ = @string.parse_int64(repr) catch {
       _ =>
         raise @config.ConfigError::ParseError(
-          "整数 \{repr} 超出 Int64 范围",
+          "integer \{repr} exceeds Int64 range",
         )
     }
   }

@@ -37,7 +37,7 @@ fn record_port(cfg : Config, changes : Array[Int64]) -> Unit {
 
 ///|
 fn raise_from_callback(_ : Config) -> Unit raise ConfigError {
-  raise ConfigError::ParseError("回调失败")
+  raise ConfigError::ParseError("callback failed")
 }
 
 ///|
@@ -59,7 +59,7 @@ test "watcher reloads changed files and reports errors" {
   @fs.write_string_to_file(test_path(), "{\"db\": {\"port\": 5433}}")
   assert_true(watcher.poll())
   assert_eq(changes, [5433L])
-  // 坏配置：回调 on_error，旧快照不动
+  // bad config：回调 on_error，旧快照不动
   @fs.write_string_to_file(test_path(), "not json")
   assert_false(watcher.poll())
   assert_eq(errors.length(), 1)

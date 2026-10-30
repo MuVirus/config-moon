@@ -43,7 +43,7 @@ impl @config.Validate for DbCfg with fn validate(
 }
 
 ///|
-/// 64 位字段写 `Int64Text`：core 的 `Int64` 只吃 JSON 字符串，和本库的整数映射对不上
+/// 64 位字段写 `Int64Text`：core 的 `Int64` 只吃 JSON 字符串，和本库的integermap对不上
 struct BigCfg {
   id : @json_format.Int64Text
 } derive(@json.FromJson)
@@ -71,7 +71,7 @@ struct RatioCfg {
 pub extend RatioCfg with @json.FromJson::{from_json}
 
 ///|
-/// 整数值取 `Int`，带小数的取 `Float`
+/// integer值取 `Int`，带小数的取 `Float`
 test "json source splits int and float" {
   let cfg = Config::new()
     .add(
@@ -86,21 +86,21 @@ test "json source splits int and float" {
 }
 
 ///|
-/// `1.0` 这种整数值的浮点写法仍然按 Float 存，`get_int` 不能把它当整数。
+/// `1.0` 这种integer值的浮点写法仍然按 Float 存，`get_int` 不能把它当integer。
 test "integral float is not readable as Int" {
   let cfg = Config::new().add(json("{\"port\": 1.0}")).build()
   let message = try {
     ignore(cfg.get_int("port"))
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 port 类型不符：期望 Int，实际 Float")
+  assert_eq(message, "key 'port': expected Int, got Float")
   assert_eq(cfg.get_float("port"), 1.0)
 }
 
 ///|
-/// 坏文本报 ParseError，别崩
+/// bad text报 ParseError，别崩
 test "bad json raises ParseError" {
   let failed = try {
     // 解析发生在 build() 里，来源是坏的就要在这一步报出来
@@ -115,7 +115,7 @@ test "bad json raises ParseError" {
 }
 
 ///|
-/// 大整数端到端不丢：9007199254740993 超出 Double 精度
+/// 大integer端到端不丢：9007199254740993 超出 Double 精度
 test "big int keeps full precision" {
   let cfg = Config::new().add(json("{\"id\": 9007199254740993}")).build()
   assert_eq(cfg.get_int("id"), 9007199254740993L)
@@ -154,7 +154,7 @@ test "extract explains Int64 fields" {
     error => error.to_string()
   }
   assert_eq(
-    message, "解析失败：配置项 db.id 是 64 位整数：结构体字段请声明为 Int64Text，或改用 get_int",
+    message, "parse error: key 'db.id' is a 64-bit integer: declare the struct field as Int64Text or use get_int",
   )
 }
 
@@ -169,7 +169,7 @@ test "Int64Text rejects string source" {
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 db.id 类型不符：期望 Int64，实际 Str")
+  assert_eq(message, "key 'db.id': expected Int64, got Str")
 }
 
 ///|
@@ -185,7 +185,7 @@ test "extract reports key and types" {
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 db.port 类型不符：期望 Int，实际 Str")
+  assert_eq(message, "key 'db.port': expected Int, got Str")
 }
 
 ///|
@@ -198,13 +198,11 @@ test "extract rejects float into Int field" {
   let message = try {
     let db : DbCfg = extract_from(cfg, "db")
     ignore(db)
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    message, "配置项 db.port 类型不符：期望 Int，实际 Float",
-  )
+  assert_eq(message, "key 'db.port': expected Int, got Float")
 }
 
 ///|
@@ -251,12 +249,12 @@ test "extract_validated_from reports the constraint" {
     .build()
   let message = try {
     let _ : DbCfg = extract_validated_from(cfg, "db")
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
   assert_eq(
-    message, "配置项 db.port 不符合约束：期望 1..65535，实际 70000",
+    message, "invalid value for key 'db.port': expected 1..65535, got 70000",
   )
 }
 

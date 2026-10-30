@@ -36,7 +36,7 @@ pub fn FileSource::auto(
 pub impl @config.Locator for FileSource with fn read(self : FileSource) -> Bytes raise @config.ConfigError {
   @fs.read_file_to_bytes(self.path) catch {
     @fs.IOError(message) =>
-      raise @config.ConfigError::IoError("文件 \{self.path}：\{message}")
+      raise @config.ConfigError::IoError("file '\{self.path}': \{message}")
   }
 }
 

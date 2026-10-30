@@ -23,7 +23,7 @@ test "toml variants convert to value kinds" {
 }
 
 ///|
-/// 大整数按 Int64 原样保留
+/// 大integer按 Int64 原样保留
 test "big integers survive" {
   let v = parse_toml("id = 9007199254740993\n")
   assert_eq(v, Value::table({ "id": Value::int(9007199254740993L) }))
@@ -98,7 +98,7 @@ test "quoted keys" {
 }
 
 ///|
-/// 嵌套的段落数组
+/// 嵌套的段落array
 test "nested arrays of tables" {
   let v = parse_toml(
     "[[server.replicas]]\nname = \"primary\"\n\n[[server.replicas]]\nname = \"secondary\"\n",
@@ -128,7 +128,7 @@ test "empty toml is an empty table" {
 test "duplicate keys report ParseError" {
   let message = try {
     ignore(parse_toml("a = 1\na = 2\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
@@ -141,12 +141,12 @@ test "duplicate keys report ParseError" {
 test "non-table root reports ParseError" {
   let message = try {
     ignore(toml_root_to_value(@toml.TomlValue::TomlString("x")))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "TOML 的根节点必须是表，实际是 string")
+  assert_eq(message, "TOML root must be a table, got string")
 }
 
 ///|

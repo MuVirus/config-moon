@@ -19,7 +19,7 @@ fn cbor(bytes : Bytes) -> BytesSource {
 }
 
 ///|
-/// 嵌套的映射
+/// 嵌套的map
 test "cbor reads a nested map" {
   let cfg = Config::new()
     .add(cbor(b"\xa1\x62db\xa2\x64host\x69localhost\x64port\x19\x15\x38"))
@@ -51,14 +51,14 @@ test "cbor reads every scalar kind" {
 }
 
 ///|
-/// 负整数
+/// 负integer
 test "cbor reads negative integers" {
   let cfg = Config::new().add(cbor(b"\xa1\x61n\x20")).build()
   assert_eq(cfg.get_int("n"), -1L)
 }
 
 ///|
-/// 字节串原样保留
+/// byte string原样保留
 test "cbor keeps byte strings as bytes" {
   let cfg = Config::new().add(cbor(b"\xa1\x64blob\x43\x01\x02\xff")).build()
   assert_eq(cfg.get_bytes("blob"), b"\x01\x02\xff")
@@ -91,7 +91,7 @@ test "cbor reads indefinite-length containers" {
 }
 
 ///|
-/// 大整数在 Int64 范围内时原样保留
+/// 大integer在 Int64 范围内时原样保留
 test "big integers inside Int64 survive" {
   let cfg = Config::new()
     .add(cbor(b"\xa1\x63big\x1b\x00\x20\x00\x00\x00\x00\x00\x01"))
@@ -122,57 +122,55 @@ test "cbor over memory overrides only the same key" {
 }
 
 ///|
-/// 根节点不是映射时报 ParseError
+/// 根节点不是map时报 ParseError
 test "non-map root reports ParseError" {
   let message = try {
     ignore(cbor(b"\x82\x01\x02").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "CBOR 的根节点必须是映射，实际是 数组")
+  assert_eq(message, "CBOR root must be a map, got array")
 }
 
 ///|
-/// 映射键不是文本字符串时报 ParseError
+/// map键不是text字符串时报 ParseError
 test "non-string map key reports ParseError" {
   let message = try {
     ignore(cbor(b"\xa1\x01\x61x").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(
-    message, "CBOR 的映射键必须是文本字符串，实际是 整数",
-  )
+  assert_eq(message, "CBOR map keys must be text strings, got integer")
 }
 
 ///|
-/// undefined 报错，不悄悄当成空值
+/// undefined 报错，不悄悄当成null
 test "undefined reports ParseError" {
   let message = try {
     ignore(cbor(b"\xa1\x61u\xf7").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "CBOR 的 undefined 在 Value 里没有对应形状")
+  assert_eq(message, "CBOR undefined has no corresponding Value representation")
 }
 
 ///|
-/// 整数超出 Int64 范围时报 ParseError
+/// integer超出 Int64 范围时报 ParseError
 test "integer beyond Int64 reports ParseError" {
   let message = try {
     ignore(cbor(b"\xa1\x63big\x1b\xff\xff\xff\xff\xff\xff\xff\xff").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "整数 18446744073709551615 超出 Int64 范围")
+  assert_eq(message, "integer 18446744073709551615 exceeds Int64 range")
 }
 
 ///|
@@ -180,12 +178,12 @@ test "integer beyond Int64 reports ParseError" {
 test "trailing bytes report ParseError" {
   let message = try {
     ignore(cbor(b"\xf6\x00").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "数据末尾还有 1 个字节没读完")
+  assert_eq(message, "trailing data: 1 byte(s) remaining")
 }
 
 ///|
@@ -193,12 +191,12 @@ test "trailing bytes report ParseError" {
 test "truncated input reports ParseError" {
   let message = try {
     ignore(cbor(b"\xa1\x64port\x19\x15").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "数据意外结束")
+  assert_eq(message, "unexpected end of data")
 }
 
 ///|
@@ -207,7 +205,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(cbor(b"\xa1\x64port\x19\x15\x38")).build()
   let message = try {
     ignore(cfg.get_string("port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -217,12 +215,12 @@ test "wrong type reports TypeMismatch" {
 }
 
 ///|
-/// 对字节串取字符串会报出实际类型
+/// 对byte string取字符串会报出实际类型
 test "bytes report Bytes as the actual type" {
   let cfg = Config::new().add(cbor(b"\xa1\x64blob\x43\x01\x02\xff")).build()
   let message = try {
     ignore(cfg.get_string("blob"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"

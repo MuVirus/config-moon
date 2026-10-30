@@ -59,7 +59,7 @@ JSON 解码打开了 `preserve_number_repr=true`，所以 `1.0`、`1e2`、`-0.0`
 |---|---|
 | 字段缺失（`Missing field port`） | `MissingKey("db.port")` |
 | 类型不符（`Int::from_json: expected number`） | `TypeMismatch("db.port", "Int", "Str")` |
-| 整数溢出（`Int::from_json: overflow`） | `ParseError("配置项 db.port 超出 Int 范围")` |
-| 结构体写了 `Int64`（`expected number in string representation`） | `ParseError("配置项 db.port 是 64 位整数：结构体字段请声明为 Int64Text，或改用 get_int")` |
+| 整数溢出（`Int::from_json: overflow`） | `ParseError("key 'db.port' is out of range for Int")` |
+| 结构体写了 `Int64`（`expected number in string representation`） | `ParseError("key 'db.port' is a 64-bit integer: declare the struct field as Int64Text or use get_int")` |
 
 期望类型从标准库的消息前缀取（`String` → `Str`，`Double` → `Float`，`Map` → `Table`），实际类型从 `Value` 反查，所以消息里的名字和 `get_*` 一致。

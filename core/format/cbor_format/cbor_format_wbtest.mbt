@@ -32,7 +32,7 @@ test "cbor false and null convert" {
 }
 
 ///|
-/// 嵌套的数组和映射
+/// 嵌套的array和map
 test "nested containers convert" {
   let v = parse_cbor(b"\xa1\x67numbers\x83\x01\x82\x02\x03\xa1\x61k\x61v")
   assert_eq(
@@ -50,21 +50,21 @@ test "nested containers convert" {
 ///|
 /// 形状的名字
 test "cbor type names" {
-  assert_eq(cbor_type_name(@cbor.CborValue::Unsigned(1UL)), "整数")
-  assert_eq(cbor_type_name(@cbor.CborValue::Integer(-1L)), "整数")
-  assert_eq(cbor_type_name(@cbor.CborValue::Bytes(b"x")), "字节串")
-  assert_eq(cbor_type_name(@cbor.CborValue::Text("x")), "文本")
-  assert_eq(cbor_type_name(@cbor.CborValue::Array([])), "数组")
-  assert_eq(cbor_type_name(@cbor.CborValue::Map([])), "映射")
+  assert_eq(cbor_type_name(@cbor.CborValue::Unsigned(1UL)), "integer")
+  assert_eq(cbor_type_name(@cbor.CborValue::Integer(-1L)), "integer")
+  assert_eq(cbor_type_name(@cbor.CborValue::Bytes(b"x")), "byte string")
+  assert_eq(cbor_type_name(@cbor.CborValue::Text("x")), "text")
+  assert_eq(cbor_type_name(@cbor.CborValue::Array([])), "array")
+  assert_eq(cbor_type_name(@cbor.CborValue::Map([])), "map")
   assert_eq(
     cbor_type_name(@cbor.CborValue::Tag(0, @cbor.CborValue::Text("x"))),
-    "带标签的值",
+    "tagged value",
   )
-  assert_eq(cbor_type_name(@cbor.CborValue::Simple(20)), "布尔")
-  assert_eq(cbor_type_name(@cbor.CborValue::Simple(22)), "空值")
-  assert_eq(cbor_type_name(@cbor.CborValue::Simple(23)), "未定义")
-  assert_eq(cbor_type_name(@cbor.CborValue::Simple(1)), "简单值")
-  assert_eq(cbor_type_name(@cbor.CborValue::Float64(1.0)), "浮点数")
+  assert_eq(cbor_type_name(@cbor.CborValue::Simple(20)), "boolean")
+  assert_eq(cbor_type_name(@cbor.CborValue::Simple(22)), "null")
+  assert_eq(cbor_type_name(@cbor.CborValue::Simple(23)), "undefined")
+  assert_eq(cbor_type_name(@cbor.CborValue::Simple(1)), "simple value")
+  assert_eq(cbor_type_name(@cbor.CborValue::Float64(1.0)), "float")
 }
 
 ///|
@@ -72,61 +72,61 @@ test "cbor type names" {
 test "cbor error text" {
   assert_eq(
     cbor_error_text(@cbor.CborError::UnexpectedEOF),
-    "数据意外结束",
+    "unexpected end of data",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::UnexpectedBreak),
-    "出现了不该有的 break 标记",
+    "unexpected break marker",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::InvalidMajorType(b'\x1c')),
-    "非法的主类型 28",
+    "invalid major type 28",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::InvalidAdditionalInfo(b'\x1c')),
-    "非法的附加信息 28",
+    "invalid additional information 28",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::InvalidIndefiniteChunk(b'\x1c')),
-    "非法的分段块首字节 28",
+    "invalid indefinite-length chunk header 28",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::InvalidUtf8),
-    "文本不是合法的 UTF-8",
+    "text is not valid UTF-8",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::NonCanonicalEncoding("x")),
-    "不是规范的编码：x",
+    "non-canonical encoding: x",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::TrailingBytes(3)),
-    "数据末尾还有 3 个字节没读完",
+    "trailing data: 3 byte(s) remaining",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::UnsupportedFloatWidth(b'\x1c')),
-    "不支持的浮点宽度 28",
+    "unsupported float width 28",
   )
   assert_eq(
     cbor_error_text(@cbor.CborError::SemanticError("x")),
-    "语义错误：x",
+    "semantic error: x",
   )
 }
 
 ///|
-/// 根节点不是映射时报错
+/// 根节点不是map时报错
 test "non-map root reports ParseError" {
   let message = try {
     ignore(cbor_root_to_value(@cbor.CborValue::Text("x")))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "CBOR 的根节点必须是映射，实际是 文本")
+  assert_eq(message, "CBOR root must be a map, got text")
 }
 
 ///|
-/// 键不是文本字符串时报错
+/// 键不是text字符串时报错
 test "non-string key reports ParseError" {
   let message = try {
     ignore(
@@ -134,14 +134,12 @@ test "non-string key reports ParseError" {
         (@cbor.CborValue::Integer(1L), @cbor.CborValue::Text("x")),
       ]),
     )
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(
-    message, "CBOR 的映射键必须是文本字符串，实际是 整数",
-  )
+  assert_eq(message, "CBOR map keys must be text strings, got integer")
 }
 
 ///|
@@ -154,14 +152,16 @@ test "tags are unwrapped" {
 }
 
 ///|
-/// 其它简单值没有对应的形状
+/// 其它simple value没有对应的形状
 test "other simple values have no shape" {
   let message = try {
     ignore(cbor_to_value(@cbor.CborValue::Simple(1)))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "CBOR 的简单值 1 在 Value 里没有对应形状")
+  assert_eq(
+    message, "CBOR simple value 1 has no corresponding Value representation",
+  )
 }

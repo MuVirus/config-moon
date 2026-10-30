@@ -63,9 +63,9 @@ Rule::allowed_keys("db", ["host", "port", "user"])
 | 出现没列出的键 | `UnknownKey(path)` |
 
 ```text
-配置项 db.port 不符合约束：期望 1..65535，实际 70000
-配置项 db.user 不符合约束：期望 1..64 个字符，实际 0 个字符
-配置项 db.extra 不在允许的键里
+invalid value for key 'db.port': expected 1..65535, got 70000
+invalid value for key 'db.user': expected 1..64 characters, got 0 characters
+key 'db.extra' is not allowed
 ```
 
 `actual` 由规则给：类型不符时是形状名（`Str`），长度不符时是长度，自定义规则自己决定。

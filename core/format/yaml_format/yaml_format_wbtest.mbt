@@ -27,23 +27,23 @@ test "yaml variants convert to value kinds" {
 }
 
 ///|
-/// 大整数按 Int64 原样保留
+/// 大integer按 Int64 原样保留
 test "big integers survive" {
   let v = parse_yaml("id: 9007199254740993\n")
   assert_eq(v, Value::table({ "id": Value::int(9007199254740993L) }))
 }
 
 ///|
-/// 超出 Int64 的整数报错，不静默变成浮点
+/// 超出 Int64 的integer报错，不静默变成浮点
 test "integer overflow reports ParseError" {
   let message = try {
     ignore(parse_yaml("id: 99999999999999999999\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "整数 99999999999999999999 超出 Int64 范围")
+  assert_eq(message, "integer 99999999999999999999 exceeds Int64 range")
 }
 
 ///|
@@ -62,7 +62,7 @@ test "float shapes" {
 }
 
 ///|
-/// 显式的浮点标签即使原文是整数形状也保持 Float
+/// 显式的浮点标签即使原文是integer形状也保持 Float
 test "explicit float tag stays Float" {
   let v = parse_yaml("a: !!float 2\nb: !!float 2.0\n")
   assert_eq(v, Value::table({ "a": Value::float(2.0), "b": Value::float(2.0) }))
@@ -79,7 +79,7 @@ test "nan" {
 }
 
 ///|
-/// YAML 认的布尔写法
+/// YAML 认的boolean写法
 test "boolean variants" {
   let v = parse_yaml(
     "a: true\nb: True\nc: TRUE\nd: false\ne: False\nf: FALSE\n",
@@ -115,7 +115,7 @@ test "null variants" {
 }
 
 ///|
-/// 十六进制、八进制整数
+/// 十六进制、八进制integer
 test "hex and octal integers" {
   let v = parse_yaml("a: 0x2A\nb: 0o52\n")
   assert_eq(v, Value::table({ "a": Value::int(42L), "b": Value::int(42L) }))
@@ -129,7 +129,7 @@ test "timestamp-like values stay strings" {
 }
 
 ///|
-/// 引号包住的数字和布尔都不猜类型
+/// 引号包住的数字和boolean都不猜类型
 test "quoted scalars stay strings" {
   let v = parse_yaml("a: \"42\"\nb: '1.5'\nc: \"true\"\n")
   assert_eq(
@@ -171,7 +171,7 @@ test "empty documents are empty tables" {
 test "duplicate keys report ParseError" {
   let message = try {
     ignore(parse_yaml("a: 1\na: 2\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
@@ -184,7 +184,7 @@ test "duplicate keys report ParseError" {
 test "non-string keys report ParseError" {
   let message = try {
     ignore(parse_yaml("1: value\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
@@ -197,12 +197,12 @@ test "non-string keys report ParseError" {
 test "bad value reports ParseError" {
   let message = try {
     ignore(yaml_to_value(Yaml::BadValue))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "YAML 里有无法表示的值")
+  assert_eq(message, "YAML contains a value that cannot be represented")
 }
 
 ///|
@@ -210,16 +210,16 @@ test "bad value reports ParseError" {
 test "nested bad value reports ParseError" {
   let message = try {
     ignore(yaml_to_value(Yaml::Map({ "a": Yaml::BadValue })))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "YAML 里有无法表示的值")
+  assert_eq(message, "YAML contains a value that cannot be represented")
 }
 
 ///|
-/// 整数形状的判断
+/// integer形状的判断
 test "integer literal shapes" {
   assert_true(is_int_literal("0"))
   assert_true(is_int_literal("42"))

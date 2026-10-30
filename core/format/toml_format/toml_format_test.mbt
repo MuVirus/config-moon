@@ -37,7 +37,7 @@ test "toml reads tables, dotted keys and scalars" {
 }
 
 ///|
-/// 行内表和数组
+/// 行内表和array
 test "toml reads inline tables and arrays" {
   let cfg = Config::new()
     .add(
@@ -66,7 +66,7 @@ test "dotted keys nest" {
 }
 
 ///|
-/// 段落的数组
+/// 段落的array
 test "arrays of tables" {
   let cfg = Config::new()
     .add(
@@ -138,7 +138,7 @@ test "empty toml is an empty table" {
   let cfg = Config::new().add(toml("# 只有注释\n")).build()
   let message = try {
     ignore(cfg.get_string("db.host"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -152,7 +152,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(toml("[db]\nport = 5432\n")).build()
   let message = try {
     ignore(cfg.get_string("db.port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -166,7 +166,7 @@ test "wrong type reports TypeMismatch" {
 test "invalid toml reports ParseError" {
   let message = try {
     ignore(toml("a = [unclosed\n").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
@@ -175,14 +175,14 @@ test "invalid toml reports ParseError" {
 }
 
 ///|
-/// 数组里混着不同类型报错
+/// array里混着不同类型报错
 test "mixed array reports ParseError" {
   let message = try {
     ignore(toml("a = [1, \"two\", 3.0]\n").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "数组里的元素必须是同一种类型")
+  assert_eq(message, "array elements must all have the same type")
 }

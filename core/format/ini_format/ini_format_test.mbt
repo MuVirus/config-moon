@@ -84,7 +84,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(ini("[db]\nport = 5432\n")).build()
   let message = try {
     ignore(cfg.get_string("db.port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -99,7 +99,7 @@ test "missing section reports MissingKey" {
   let cfg = Config::new().add(ini("[db]\nport = 5432\n")).build()
   let message = try {
     ignore(cfg.get_int("cache.port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()

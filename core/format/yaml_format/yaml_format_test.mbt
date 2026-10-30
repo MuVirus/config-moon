@@ -19,7 +19,7 @@ fn yaml(text : String) -> StringSource {
 }
 
 ///|
-/// 嵌套映射、序列和各种标量
+/// 嵌套map、序列和各种标量
 test "yaml reads nested mappings, sequences and scalars" {
   let cfg = Config::new()
     .add(
@@ -40,7 +40,7 @@ test "yaml reads nested mappings, sequences and scalars" {
 }
 
 ///|
-/// 根节点是映射时，键可以按点号路径取
+/// 根节点是map时，键可以按点号路径取
 test "nested keys are reachable by dotted path" {
   let cfg = Config::new().add(yaml("a:\n  b:\n    c: 1\n")).build()
   assert_eq(cfg.get_int("a.b.c"), 1L)
@@ -117,16 +117,16 @@ test "yaml over memory overrides only the same key" {
 }
 
 ///|
-/// 显式浮点标签是浮点来源，不能按整数读
+/// 显式浮点标签是浮点来源，不能按integer读
 test "explicit float is not readable as Int" {
   let cfg = Config::new().add(yaml("port: !!float 2\n")).build()
   let message = try {
     ignore(cfg.get_int("port"))
-    "没有报错"
+    "no error"
   } catch {
     e => e.to_string()
   }
-  assert_eq(message, "配置项 port 类型不符：期望 Int，实际 Float")
+  assert_eq(message, "key 'port': expected Int, got Float")
   assert_eq(cfg.get_float("port"), 2.0)
 }
 
@@ -136,7 +136,7 @@ test "empty yaml is an empty table" {
   let cfg = Config::new().add(yaml("# 只有注释\n")).build()
   let message = try {
     ignore(cfg.get_string("db.host"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -150,7 +150,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(yaml("db:\n  port: 5432\n")).build()
   let message = try {
     ignore(cfg.get_string("db.port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -164,12 +164,14 @@ test "wrong type reports TypeMismatch" {
 test "multiple documents report ParseError" {
   let message = try {
     ignore(yaml("a: 1\n---\nb: 2\n").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "YAML 文本包含多个文档，只支持一个")
+  assert_eq(
+    message, "YAML text contains multiple documents; only one is supported",
+  )
 }
 
 ///|
@@ -177,7 +179,7 @@ test "multiple documents report ParseError" {
 test "invalid yaml reports ParseError" {
   let message = try {
     ignore(yaml("a: [1, 2\n").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()

@@ -61,7 +61,7 @@ feature.debug  memory
 取值失败的消息说清键名、期望和实际；要追来源，用 `origin_of` 单独问：
 
 ```text
-配置项 db.port 类型不符：期望 Int，实际 Str
+key 'db.port': expected Int, got Str
 origin_of("db.port") -> env:APP_DB_PORT
 ```
 

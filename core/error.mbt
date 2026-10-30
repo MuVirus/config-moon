@@ -17,24 +17,22 @@ pub(all) suberror ConfigError {
 /// 报错时给人看的消息：哪个键、期望什么、实际什么。
 pub impl Show for ConfigError with fn output(self, logger) {
   match self {
-    MissingKey(path) =>
-      logger <+ "配置项 \{path} 不存在：没有任何来源提供它"
+    MissingKey(path) => logger <+ "missing key '\{path}': no source provides it"
     TypeMismatch(path, expected, actual) =>
-      logger <+
-        "配置项 \{path} 类型不符：期望 \{expected}，实际 \{actual}"
-    ParseError(message) => logger <+ "解析失败：\{message}"
-    IoError(message) => logger <+ "读取失败：\{message}"
+      logger <+ "key '\{path}': expected \{expected}, got \{actual}"
+    ParseError(message) => logger <+ "parse error: \{message}"
+    IoError(message) => logger <+ "read error: \{message}"
     MergeConflict(path, left, right) =>
-      logger <+ "配置项 \{path} 合并冲突：\{left} 与 \{right}"
+      logger <+ "merge conflict at key '\{path}': \{left} vs \{right}"
     InvalidValue(path, expected, actual) =>
       logger <+
-        "配置项 \{path} 不符合约束：期望 \{expected}，实际 \{actual}"
-    UnknownKey(path) => logger <+ "配置项 \{path} 不在允许的键里"
+        "invalid value for key '\{path}': expected \{expected}, got \{actual}"
+    UnknownKey(path) => logger <+ "key '\{path}' is not allowed"
     UnknownFormat(name, suffixes) => {
       logger <+
-        "无法判断 \{name} 的格式：后缀不认识，内容也不像任何候选"
+        "unknown format for \{name}: suffix not recognized and content matches no candidate"
       if !suffixes.is_empty() {
-        logger <+ "；支持 "
+        logger <+ "; supported suffixes: "
         for i, suffix in suffixes {
           if i > 0 {
             logger <+ " / "

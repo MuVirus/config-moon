@@ -68,7 +68,7 @@ pub fn Detector::new(
       if !key.is_empty() {
         if by_suffix.contains(key) {
           raise @config.ConfigError::ParseError(
-            "格式候选重复声明后缀 .\{key}",
+            "duplicate suffix .\{key} declared by format candidates",
           )
         }
         by_suffix[key] = format
@@ -126,7 +126,7 @@ pub impl @config.Format for Detector with fn decode(
   self : Detector,
   bytes : Bytes,
 ) -> @config.Value raise @config.ConfigError {
-  self.decode_content("内容", bytes)
+  self.decode_content("content", bytes)
 }
 
 ///|

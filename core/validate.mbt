@@ -68,7 +68,7 @@ pub fn Rule::int_range(path : String, min : Int64, max : Int64) -> Rule {
 ///|
 /// 字符串长度，两端都包含
 pub fn Rule::string_len(path : String, min : Int32, max : Int32) -> Rule {
-  let expected = "\{min}..\{max} 个字符"
+  let expected = "\{min}..\{max} characters"
   rule_at(KeyPath::parse(path), fn(found_path, value) {
     match value.kind {
       ValueKind::Str(text) => {
@@ -78,7 +78,7 @@ pub fn Rule::string_len(path : String, min : Int32, max : Int32) -> Rule {
             ConfigError::InvalidValue(
               found_path.to_string(),
               expected,
-              "\{length} 个字符",
+              "\{length} characters",
             ),
           )
         } else {
@@ -182,8 +182,8 @@ pub fn check_string_len(
   if length < min || length > max {
     raise ConfigError::InvalidValue(
       path.to_string(),
-      "\{min}..\{max} 个字符",
-      "\{length} 个字符",
+      "\{min}..\{max} characters",
+      "\{length} characters",
     )
   }
 }

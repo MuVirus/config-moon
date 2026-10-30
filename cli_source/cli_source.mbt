@@ -106,7 +106,7 @@ pub impl @config.Source for CliSource with fn collect(self : CliSource) -> @conf
         @config.Value::from_literal(pair.1) catch {
           @config.ConfigError::ParseError(message) =>
             raise @config.ConfigError::ParseError(
-              "参数 cli:\{name}：\{message}",
+              "argument cli:\{name}: \{message}",
             )
           error => raise error
         }
@@ -157,7 +157,7 @@ fn push_segment(
   let text = segment.to_string()
   if text.length() == 0 {
     raise @config.ConfigError::ParseError(
-      "参数 --\{key}：键名有空的层级",
+      "argument --\{key}: key has an empty segment",
     )
   }
   path.push(text)
@@ -186,7 +186,7 @@ fn assign(
           k => {
             let owner = seen.get(joined).unwrap_or("?")
             raise @config.ConfigError::ParseError(
-              "参数 cli:\{name}：\{joined} 已经是 \{k.name()}（由 cli:\{owner} 提供），不能当层级名",
+              "argument cli:\{name}: \{joined} is already \{k.name()} (provided by cli:\{owner}) and cannot be used as a path segment",
             )
           }
         }
@@ -206,7 +206,7 @@ fn assign(
       match existing.kind {
         @config.ValueKind::Table(_) =>
           raise @config.ConfigError::ParseError(
-            "参数 cli:\{name}：\{joined} 下面已经有配置，不能整个覆盖",
+            "argument cli:\{name}: \{joined} already has configuration below it and cannot be replaced wholesale",
           )
         _ => ()
       }

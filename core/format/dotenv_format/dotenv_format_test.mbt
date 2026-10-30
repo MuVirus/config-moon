@@ -42,7 +42,7 @@ test "underscores do not become dots" {
   assert_eq(cfg.get_string("DB_HOST"), "localhost")
   let message = try {
     ignore(cfg.get_string("DB.HOST"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -92,7 +92,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(dotenv("DB_PORT=5432\n")).build()
   let message = try {
     ignore(cfg.get_string("DB_PORT"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -107,7 +107,7 @@ test "missing key reports MissingKey" {
   let cfg = Config::new().add(dotenv("DB_PORT=5432\n")).build()
   let message = try {
     ignore(cfg.get_int("DB_HOST"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()

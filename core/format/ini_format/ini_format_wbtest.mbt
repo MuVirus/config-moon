@@ -30,25 +30,23 @@ test "colon works as delimiter" {
 }
 
 ///|
-/// 大整数不丢
+/// 大integer不丢
 test "big integers survive" {
   let v = parse_ini("id = 9007199254740993\n")
   assert_eq(v, Value::table({ "id": Value::int(9007199254740993L) }))
 }
 
 ///|
-/// 整数溢出 Int64 报错，不静默截断
+/// integer溢出 Int64 报错，不静默截断
 test "integer overflow reports ParseError" {
   let message = try {
     ignore(parse_ini("id = 99999999999999999999\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(
-    message, "第 1 行：整数 99999999999999999999 超出 Int64 范围",
-  )
+  assert_eq(message, "line 1: integer 99999999999999999999 exceeds Int64 range")
 }
 
 ///|
@@ -84,7 +82,7 @@ test "number-ish strings stay strings" {
 }
 
 ///|
-/// 只有 `true` / `false` 是布尔，其它拼法都按字符串
+/// 只有 `true` / `false` 是boolean，其它拼法都按字符串
 test "only true and false are booleans" {
   let v = parse_ini("a = true\nb = TRUE\nc = yes\nd = false\n")
   assert_eq(
@@ -99,7 +97,7 @@ test "only true and false are booleans" {
 }
 
 ///|
-/// 空值是空字符串，不是 Null
+/// null是empty string，不是 Null
 test "empty value is an empty string" {
   let v = parse_ini("a =\n")
   assert_eq(v, Value::table({ "a": Value::str("") }))
@@ -143,72 +141,74 @@ test "dotted section nests" {
 test "section shadowing a scalar reports ParseError" {
   let message = try {
     ignore(parse_ini("a = 1\n[a]\nb = 2\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 2 行：a 已经是 Int，不能当段落名")
+  assert_eq(
+    message, "line 2: a is already Int and cannot be used as a section name",
+  )
 }
 
 ///|
 test "missing delimiter reports ParseError" {
   let message = try {
     ignore(parse_ini("[db]\nhost\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 2 行：host 缺 `=` 或 `:`")
+  assert_eq(message, "line 2: host is missing '=' or ':'")
 }
 
 ///|
 test "empty key reports ParseError" {
   let message = try {
     ignore(parse_ini("[db]\n = localhost\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 2 行：键名为空")
+  assert_eq(message, "line 2: key name is empty")
 }
 
 ///|
 test "unclosed section header reports ParseError" {
   let message = try {
     ignore(parse_ini("[db\nport = 1\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：段落头 [db 缺右方括号")
+  assert_eq(message, "line 1: section header [db is missing the closing ']'")
 }
 
 ///|
 test "empty section name reports ParseError" {
   let message = try {
     ignore(parse_ini("[]\nport = 1\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：段落名  有空的一层")
+  assert_eq(message, "line 1: section name  has an empty segment")
 }
 
 ///|
 test "empty section layer reports ParseError" {
   let message = try {
     ignore(parse_ini("[a..b]\nk = 1\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：段落名 a..b 有空的一层")
+  assert_eq(message, "line 1: section name a..b has an empty segment")
 }
 
 ///|

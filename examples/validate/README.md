@@ -61,7 +61,7 @@ Rule::allowed_keys("db", ["host", "port", "user"])
 内置规则不够用时，返回 `None` 表示通过，`Some(实际值)` 表示失败：
 
 ```moonbit
-Rule::custom("db.host", "非空且不含空格", fn(value) {
+Rule::custom("db.host", "non-empty and without spaces", fn(value) {
   match value.kind {
     ValueKind::Str(text) => if text.length() > 0 && !text.contains(" ") { None } else { Some(text) }
     _ => Some(value.kind.name())
@@ -76,20 +76,20 @@ Rule::custom("db.host", "非空且不含空格", fn(value) {
 `examples/validate/main.mbt` 里的配置故意写坏了：端口 70000、用户名为空、日志级别 `verbose`、`db` 下多了一个 `extra`。
 
 ```text
-== 1. 按键校验：遇到第一个错误就停 ==
-配置项 db.port 不符合约束：期望 1..65535，实际 70000
+== 1. Validate by key: stop at the first error ==
+invalid value for key 'db.port': expected 1..65535, got 70000
 
-== 2. 按键校验：一次列全 ==
-配置项 db.port 不符合约束：期望 1..65535，实际 70000
-配置项 db.user 不符合约束：期望 1..64 个字符，实际 0 个字符
-配置项 log.level 不符合约束：期望 debug / info / warn / error，实际 verbose
-配置项 db.extra 不在允许的键里
+== 2. Validate by key: list every error ==
+invalid value for key 'db.port': expected 1..65535, got 70000
+invalid value for key 'db.user': expected 1..64 characters, got 0 characters
+invalid value for key 'log.level': expected debug / info / warn / error, got verbose
+key 'db.extra' is not allowed
 
-== 3. 提取到结构体：约束跟着字段走 ==
-配置项 db.port 不符合约束：期望 1..65535，实际 70000
+== 3. Extract into a struct: constraints follow the fields ==
+invalid value for key 'db.port': expected 1..65535, got 70000
 
-== 4. 自定义规则 ==
-通过
+== 4. Custom rules ==
+passed
 ```
 
 ## 边界

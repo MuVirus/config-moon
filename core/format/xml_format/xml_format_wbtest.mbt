@@ -80,7 +80,7 @@ test "mixed content lands on #text" {
 }
 
 ///|
-/// 同名兄弟元素：一个时是那个值，多个时是数组
+/// 同名兄弟元素：一个时是那个值，多个时是array
 test "one sibling is a value, many are an array" {
   let v = parse_xml("<config><a><b>1</b></a><a><b>2</b><b>3</b></a></config>")
   assert_eq(
@@ -121,27 +121,27 @@ test "cdata mixed with plain text is not literal" {
 }
 
 ///|
-/// 大整数不丢
+/// 大integer不丢
 test "big integers survive" {
   let v = parse_xml("<config><id>9007199254740993</id></config>")
   assert_eq(v, Value::table({ "id": Value::int(9007199254740993L) }))
 }
 
 ///|
-/// 整数溢出 Int64 报错，不静默截断
+/// integer溢出 Int64 报错，不静默截断
 test "integer overflow reports ParseError" {
   let message = try {
     ignore(parse_xml("<config><id>99999999999999999999</id></config>"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "整数 99999999999999999999 超出 Int64 范围")
+  assert_eq(message, "integer 99999999999999999999 exceeds Int64 range")
 }
 
 ///|
-/// 只有 `true` / `false` 是布尔
+/// 只有 `true` / `false` 是boolean
 test "only true and false are booleans" {
   let v = parse_xml("<config><a>true</a><b>True</b><c>yes</c></config>")
   assert_eq(
@@ -212,10 +212,10 @@ test "nested tables nest" {
 test "parse errors carry a position" {
   let message = try {
     ignore(parse_xml("<config><a>1</config>"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_true(message.contains("行"))
+  assert_true(message.contains("line "))
 }

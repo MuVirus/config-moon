@@ -73,16 +73,16 @@ test "detector does not fall back after a known suffix fails" {
 test "detector reports UnknownFormat with supported suffixes" {
   let message = try {
     ignore(detector().decode_path("app.conf", @utf8.encode("plain text")))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::UnknownFormat(name, suffixes) => {
       assert_eq(name, "app.conf")
       assert_eq(suffixes, ["json", "toml"])
-      "无法判断"
+      "cannot detect"
     }
     e => e.to_string()
   }
-  assert_eq(message, "无法判断")
+  assert_eq(message, "cannot detect")
 }
 
 ///|

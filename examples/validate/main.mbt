@@ -67,7 +67,7 @@ fn validate_by_key(cfg : Config) -> Unit raise {
 fn show_all_errors(cfg : Config) -> Unit raise {
   let errors = cfg.validate_all(db_rules())
   if errors.is_empty() {
-    println("通过")
+    println("passed")
   } else {
     for error in errors {
       println(error.to_string())
@@ -115,7 +115,7 @@ fn validate_by_struct(cfg : Config) -> Unit raise {
 /// `实际值` 会进错误消息，密码这类字段别原样返回，只写长度或类型。
 fn validate_host(cfg : Config) -> Unit raise {
   cfg.validate([
-    Rule::custom("db.host", "非空且不含空格", fn(value) {
+    Rule::custom("db.host", "non-empty and without spaces", fn(value) {
       match value.kind {
         ValueKind::Str(text) =>
           if text.length() > 0 && !text.contains(" ") {
@@ -133,29 +133,29 @@ fn validate_host(cfg : Config) -> Unit raise {
 fn main raise {
   let cfg = build_config()
 
-  println("== 1. 按键校验：遇到第一个错误就停 ==")
+  println("== 1. Validate by key: stop at the first error ==")
   try {
     validate_by_key(cfg)
-    println("通过")
+    println("passed")
   } catch {
     error => println(error.to_string())
   }
 
   println("")
-  println("== 2. 按键校验：一次列全 ==")
+  println("== 2. Validate by key: list every error ==")
   show_all_errors(cfg)
 
   println("")
-  println("== 3. 提取到结构体：约束跟着字段走 ==")
+  println("== 3. Extract into a struct: constraints follow the fields ==")
   validate_by_struct(cfg) catch {
     error => println(error.to_string())
   }
 
   println("")
-  println("== 4. 自定义规则 ==")
+  println("== 4. Custom rules ==")
   try {
     validate_host(cfg)
-    println("通过")
+    println("passed")
   } catch {
     error => println(error.to_string())
   }

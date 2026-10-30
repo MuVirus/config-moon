@@ -4,7 +4,7 @@
 // 不经过上层的 Config / StringSource。
 
 ///|
-/// 把 JSON 文本解码成底层 `Value`，后面的测试统一走 `extract(Value)`。
+/// 把 JSON text解码成底层 `Value`，后面的测试统一走 `extract(Value)`。
 fn json_value(text : Bytes) -> @config.Value raise @config.ConfigError {
   @json_format.JsonFormat::new().decode(text)
 }
@@ -14,7 +14,7 @@ fn json_value(text : Bytes) -> @config.Value raise @config.ConfigError {
 fn int_extract_result(v : @config.Value) -> String {
   try {
     let got : IntValue = @json_format.extract(v)
-    "没有报错：value = \{got.value}"
+    "no error: value = \{got.value}"
   } catch {
     error => error.to_string()
   }
@@ -25,7 +25,7 @@ fn int_extract_result(v : @config.Value) -> String {
 fn text_extract_result(v : @config.Value) -> String {
   try {
     let got : TextValue = @json_format.extract(v)
-    "没有报错：value = \"\{got.value}\""
+    "no error: value = \"\{got.value}\""
   } catch {
     error => error.to_string()
   }
@@ -92,38 +92,32 @@ struct RawUInt64Value {
 pub extend RawUInt64Value with @json.FromJson::{from_json}
 
 ///|
-/// 浮点数提取成 `Int` 必须报错，不能静默截断成整数部分。
+/// float提取成 `Int` 必须报错，不能静默截断成integer部分。
 test "JSON float cannot be extracted as Int" {
   let v = json_value(b"{\"value\": 3.14}")
-  assert_eq(
-    int_extract_result(v),
-    "配置项 value 类型不符：期望 Int，实际 Float",
-  )
+  assert_eq(int_extract_result(v), "key 'value': expected Int, got Float")
 }
 
 ///|
-/// 负浮点数同样不能截断。
+/// 负float同样不能截断。
 test "negative JSON float cannot be extracted as Int" {
   let v = json_value(b"{\"value\": -3.99}")
-  assert_eq(
-    int_extract_result(v),
-    "配置项 value 类型不符：期望 Int，实际 Float",
-  )
+  assert_eq(int_extract_result(v), "key 'value': expected Int, got Float")
 }
 
 ///|
-/// 值是整数、但写法是浮点（小数点或指数）时仍是 Float，不能进 Int 字段。
+/// 值是integer、但写法是浮点（小数点或指数）时仍是 Float，不能进 Int 字段。
 test "integral JSON floats cannot be extracted as Int" {
   for text in [b"{\"value\": 1.0}", b"{\"value\": 1e2}", b"{\"value\": -0.0}"] {
     assert_eq(
       int_extract_result(json_value(text)),
-      "配置项 value 类型不符：期望 Int，实际 Float",
+      "key 'value': expected Int, got Float",
     )
   }
 }
 
 ///|
-/// 9007199254740993 超出 Double 的精确整数范围，端到端都要保原文。
+/// 9007199254740993 超出 Double 的精确integer范围，端到端都要保原文。
 test "big int stays exact in Int64Text and UInt64Text" {
   let v = json_value(b"{\"value\": 9007199254740993}")
   let signed : Int64Value = @json_format.extract(v)
@@ -133,17 +127,17 @@ test "big int stays exact in Int64Text and UInt64Text" {
 }
 
 ///|
-/// 大整数提取成 32 位 `Int` 应该报范围错误，而不是绕回或截断。
+/// 大integer提取成 32 位 `Int` 应该报范围错误，而不是绕回或截断。
 test "big int extracted as Int reports overflow" {
   let v = json_value(b"{\"value\": 9007199254740993}")
   assert_eq(
     int_extract_result(v),
-    "解析失败：配置项 value 超出 Int 范围",
+    "parse error: key 'value' is out of range for Int",
   )
 }
 
 ///|
-/// 负数大整数同样按原文还原。
+/// 负数大integer同样按原文还原。
 test "negative big int stays exact" {
   let v = json_value(b"{\"value\": -9007199254740993}")
   let signed : Int64Value = @json_format.extract(v)
@@ -151,16 +145,16 @@ test "negative big int stays exact" {
 }
 
 ///|
-/// 超出 Int64 的整数在解析阶段就报错，不能静默截断。
+/// 超出 Int64 的integer在解析阶段就报错，不能静默截断。
 test "integer beyond Int64 is rejected while parsing" {
   let message = try {
     ignore(json_value(b"{\"value\": 9223372036854775808}"))
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
   assert_eq(
-    message, "解析失败：整数 9223372036854775808 超出 Int64 范围",
+    message, "parse error: integer 9223372036854775808 exceeds Int64 range",
   )
 }
 
@@ -168,15 +162,9 @@ test "integer beyond Int64 is rejected while parsing" {
 /// 数字来源不能提取成字符串，字符串来源不能提取成数字。
 test "number and string do not cross in extraction" {
   let number = json_value(b"{\"value\": 5432}")
-  assert_eq(
-    text_extract_result(number),
-    "配置项 value 类型不符：期望 Str，实际 Int",
-  )
+  assert_eq(text_extract_result(number), "key 'value': expected Str, got Int")
   let text = json_value(b"{\"value\": \"5432\"}")
-  assert_eq(
-    int_extract_result(text),
-    "配置项 value 类型不符：期望 Int，实际 Str",
-  )
+  assert_eq(int_extract_result(text), "key 'value': expected Int, got Str")
 }
 
 ///|
@@ -184,19 +172,19 @@ test "number and string do not cross in extraction" {
 test "Int32 boundaries are strict" {
   assert_eq(
     int_extract_result(json_value(b"{\"value\": 2147483647}")),
-    "没有报错：value = 2147483647",
+    "no error: value = 2147483647",
   )
   assert_eq(
     int_extract_result(json_value(b"{\"value\": -2147483648}")),
-    "没有报错：value = -2147483648",
+    "no error: value = -2147483648",
   )
   assert_eq(
     int_extract_result(json_value(b"{\"value\": 2147483648}")),
-    "解析失败：配置项 value 超出 Int 范围",
+    "parse error: key 'value' is out of range for Int",
   )
   assert_eq(
     int_extract_result(json_value(b"{\"value\": -2147483649}")),
-    "解析失败：配置项 value 超出 Int 范围",
+    "parse error: key 'value' is out of range for Int",
   )
 }
 
@@ -206,11 +194,11 @@ test "string cannot be extracted as Double" {
   let v = json_value(b"{\"value\": \"3.14\"}")
   let message = try {
     let got : FloatValue = @json_format.extract(v)
-    "没有报错：value = \{got.value}"
+    "no error: value = \{got.value}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 value 类型不符：期望 Float，实际 Str")
+  assert_eq(message, "key 'value': expected Float, got Str")
 }
 
 ///|
@@ -224,13 +212,11 @@ test "string special floats cannot be extracted as Double" {
     let v = json_value(text)
     let message = try {
       let got : FloatValue = @json_format.extract(v)
-      "没有报错：value = \{got.value}"
+      "no error: value = \{got.value}"
     } catch {
       error => error.to_string()
     }
-    assert_eq(
-      message, "配置项 value 类型不符：期望 Float，实际 Str",
-    )
+    assert_eq(message, "key 'value': expected Float, got Str")
   }
 }
 
@@ -241,58 +227,48 @@ test "string cannot be extracted as raw Int64 or UInt64" {
   let v = json_value(b"{\"value\": \"5432\"}")
   let int_message = try {
     let got : RawInt64Value = @json_format.extract(v)
-    "没有报错：value = \{got.value}"
+    "no error: value = \{got.value}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    int_message, "配置项 value 类型不符：期望 Int64，实际 Str",
-  )
+  assert_eq(int_message, "key 'value': expected Int64, got Str")
 
   let uint_message = try {
     let got : RawUInt64Value = @json_format.extract(v)
-    "没有报错：value = \{got.value}"
+    "no error: value = \{got.value}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    uint_message, "配置项 value 类型不符：期望 UInt64，实际 Str",
-  )
+  assert_eq(uint_message, "key 'value': expected UInt64, got Str")
 }
 
 ///|
-/// `Int64Text` 只认整数形状：字符串和浮点都不收。
+/// `Int64Text` 只认integer形状：字符串和浮点都不收。
 test "Int64Text rejects string and float sources" {
   let from_string = json_value(b"{\"value\": \"9007199254740993\"}")
   let string_message = try {
     let got : Int64Value = @json_format.extract(from_string)
-    "没有报错：value = \{got.value.to_int64()}"
+    "no error: value = \{got.value.to_int64()}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    string_message, "配置项 value 类型不符：期望 Int64，实际 Str",
-  )
+  assert_eq(string_message, "key 'value': expected Int64, got Str")
 
   let from_float = json_value(b"{\"value\": 3.14}")
   let float_message = try {
     let got : Int64Value = @json_format.extract(from_float)
-    "没有报错：value = \{got.value.to_int64()}"
+    "no error: value = \{got.value.to_int64()}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    float_message, "配置项 value 类型不符：期望 Int64，实际 Float",
-  )
+  assert_eq(float_message, "key 'value': expected Int64, got Float")
 
   let from_integral_float = json_value(b"{\"value\": 1.0}")
   let integral_float_message = try {
     let got : Int64Value = @json_format.extract(from_integral_float)
-    "没有报错：value = \{got.value.to_int64()}"
+    "no error: value = \{got.value.to_int64()}"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    integral_float_message, "配置项 value 类型不符：期望 Int64，实际 Float",
-  )
+  assert_eq(integral_float_message, "key 'value': expected Int64, got Float")
 }

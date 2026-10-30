@@ -85,7 +85,7 @@
 
 > **2026-10 实现时定的细节**
 >
-> - 新增 `ConfigError::IoError(String)`：读不到外部数据（文件、环境变量）和「读到了但解析失败」是两回事，混进 `ParseError` 会让用户去查格式。消息以「读取失败：」开头，带路径或变量名。
+> - 新增 `ConfigError::IoError(String)`：读不到外部数据（文件、环境变量）和「读到了但解析失败」是两回事，混进 `ParseError` 会让用户去查格式。消息以 `read error:` 开头，带路径或变量名。
 > - `FileSource` 的路径就是 `String`，和 `moonbitlang/x/fs` 的接口一致；`FileSource` 同时实现 `OriginSite` 和 `Locator`：`describe` 给文件路径，`locator` 就是它自己，`origin_of` 拿到的 `locator` 调 `read()` 就能重新读出同一份字节。没有另外拍一个平台 `Path` 类型——那会把平台类型带进 core。
 > - `@path` 技术上能进 core（试过 `moon test` 和 `js` / `wasm-gc` 都能过），但 `x/path` 自带 native stub 和 platform cfg，会把平台分派拖进 core；`Path` 也只是 `String` 的包装，`@fs` 只收 `String`。所以 core 里保持 `String`；`FileSource` 以后真要做 `join` / `normalize` 再在包内用 `Path`。
 > - 环境变量和命令行都不是「字节 + 格式」，类型推断没法交给 `Format`。推断规则放进 core 的 `Value::from_literal`，两个包共用一份：`true` / `false` → `Bool`，整数 → `Int64`（超出范围报错），带小数点或指数 → `Float`，其余 → 字符串。dotenv 的推断没并过来，因为它要按行号报错，合并会丢掉行号。

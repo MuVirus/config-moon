@@ -101,7 +101,7 @@ fn cbor_root_to_value(
     @cbor.CborValue::Map(pairs) => cbor_map_to_value(pairs)
     v =>
       raise @config.ConfigError::ParseError(
-        "CBOR 的根节点必须是映射，实际是 \{cbor_type_name(v)}",
+        "CBOR root must be a map, got \{cbor_type_name(v)}",
       )
   }
 }
@@ -117,7 +117,7 @@ fn cbor_map_to_value(
       @cbor.CborValue::Text(name) => out[name] = cbor_to_value(v)
       k =>
         raise @config.ConfigError::ParseError(
-          "CBOR 的映射键必须是文本字符串，实际是 \{cbor_type_name(k)}",
+          "CBOR map keys must be text strings, got \{cbor_type_name(k)}",
         )
     }
   }
@@ -134,7 +134,9 @@ fn cbor_to_value(
       if u <= 0x7FFFFFFFFFFFFFFFUL {
         @config.Value::int(u.reinterpret_as_int64())
       } else {
-        raise @config.ConfigError::ParseError("整数 \{u} 超出 Int64 范围")
+        raise @config.ConfigError::ParseError(
+          "integer \{u} exceeds Int64 range",
+        )
       }
     @cbor.CborValue::Integer(i) => @config.Value::int(i)
     @cbor.CborValue::Bytes(b) => @config.Value::bytes(b)
@@ -147,11 +149,11 @@ fn cbor_to_value(
     @cbor.CborValue::Simple(22) => @config.Value::null()
     @cbor.CborValue::Simple(23) =>
       raise @config.ConfigError::ParseError(
-        "CBOR 的 undefined 在 Value 里没有对应形状",
+        "CBOR undefined has no corresponding Value representation",
       )
     @cbor.CborValue::Simple(n) =>
       raise @config.ConfigError::ParseError(
-        "CBOR 的简单值 \{n.to_int()} 在 Value 里没有对应形状",
+        "CBOR simple value \{n.to_int()} has no corresponding Value representation",
       )
     @cbor.CborValue::Float64(f) => @config.Value::float(f)
   }
@@ -161,17 +163,17 @@ fn cbor_to_value(
 /// 值的形状名字，报错时用（「实际是整数」里的那个词）。
 fn cbor_type_name(v : @cbor.CborValue) -> String {
   match v {
-    @cbor.CborValue::Unsigned(_) | @cbor.CborValue::Integer(_) => "整数"
-    @cbor.CborValue::Bytes(_) => "字节串"
-    @cbor.CborValue::Text(_) => "文本"
-    @cbor.CborValue::Array(_) => "数组"
-    @cbor.CborValue::Map(_) => "映射"
-    @cbor.CborValue::Tag(_, _) => "带标签的值"
-    @cbor.CborValue::Simple(20) | @cbor.CborValue::Simple(21) => "布尔"
-    @cbor.CborValue::Simple(22) => "空值"
-    @cbor.CborValue::Simple(23) => "未定义"
-    @cbor.CborValue::Simple(_) => "简单值"
-    @cbor.CborValue::Float64(_) => "浮点数"
+    @cbor.CborValue::Unsigned(_) | @cbor.CborValue::Integer(_) => "integer"
+    @cbor.CborValue::Bytes(_) => "byte string"
+    @cbor.CborValue::Text(_) => "text"
+    @cbor.CborValue::Array(_) => "array"
+    @cbor.CborValue::Map(_) => "map"
+    @cbor.CborValue::Tag(_, _) => "tagged value"
+    @cbor.CborValue::Simple(20) | @cbor.CborValue::Simple(21) => "boolean"
+    @cbor.CborValue::Simple(22) => "null"
+    @cbor.CborValue::Simple(23) => "undefined"
+    @cbor.CborValue::Simple(_) => "simple value"
+    @cbor.CborValue::Float64(_) => "float"
   }
 }
 
@@ -179,19 +181,18 @@ fn cbor_type_name(v : @cbor.CborValue) -> String {
 /// 解码错误的消息。
 fn cbor_error_text(e : @cbor.CborError) -> String {
   match e {
-    @cbor.CborError::UnexpectedEOF => "数据意外结束"
-    @cbor.CborError::UnexpectedBreak => "出现了不该有的 break 标记"
-    @cbor.CborError::InvalidMajorType(b) => "非法的主类型 \{b.to_int()}"
+    @cbor.CborError::UnexpectedEOF => "unexpected end of data"
+    @cbor.CborError::UnexpectedBreak => "unexpected break marker"
+    @cbor.CborError::InvalidMajorType(b) => "invalid major type \{b.to_int()}"
     @cbor.CborError::InvalidAdditionalInfo(b) =>
-      "非法的附加信息 \{b.to_int()}"
+      "invalid additional information \{b.to_int()}"
     @cbor.CborError::InvalidIndefiniteChunk(b) =>
-      "非法的分段块首字节 \{b.to_int()}"
-    @cbor.CborError::InvalidUtf8 => "文本不是合法的 UTF-8"
-    @cbor.CborError::NonCanonicalEncoding(s) => "不是规范的编码：\{s}"
-    @cbor.CborError::TrailingBytes(n) =>
-      "数据末尾还有 \{n} 个字节没读完"
+      "invalid indefinite-length chunk header \{b.to_int()}"
+    @cbor.CborError::InvalidUtf8 => "text is not valid UTF-8"
+    @cbor.CborError::NonCanonicalEncoding(s) => "non-canonical encoding: \{s}"
+    @cbor.CborError::TrailingBytes(n) => "trailing data: \{n} byte(s) remaining"
     @cbor.CborError::UnsupportedFloatWidth(b) =>
-      "不支持的浮点宽度 \{b.to_int()}"
-    @cbor.CborError::SemanticError(s) => "语义错误：\{s}"
+      "unsupported float width \{b.to_int()}"
+    @cbor.CborError::SemanticError(s) => "semantic error: \{s}"
   }
 }

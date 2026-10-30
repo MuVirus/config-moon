@@ -84,7 +84,7 @@ let cfg = Config::new()
   .build()
 
 cfg.get_string("db.port")   // "5432"
-cfg.get_int("db.port")      // 报错：配置项 db.port 类型不符：期望 Int，实际 Str
+cfg.get_int("db.port")      // 报错：key 'db.port': expected Int, got Str
 
 struct TextPort {
   port : String
@@ -95,7 +95,7 @@ struct NumericPort {
 } derive(FromJson)
 
 let text : TextPort = extract_from(cfg, "db")       // port = "5432"
-let numeric : NumericPort = extract_from(cfg, "db") // 报错：期望数字，实际字符串
+let numeric : NumericPort = extract_from(cfg, "db") // 报错：key 'db.port': expected Int, got Str
 ```
 
 ### 按键取值
@@ -331,8 +331,8 @@ try {
 }
 ```
 
-上面得到 `配置项 db.host 类型不符：期望 Int，实际 Str`；缺键则得到
-`配置项 db.user 不存在：没有任何来源提供它`。
+上面得到 `key 'db.host': expected Int, got Str`；缺键则得到
+`missing key 'db.user': no source provides it`。
 
 `extract_from` 的失败走同一套：字段缺失报 `MissingKey`，类型不符报 `TypeMismatch`，
 路径带上配置路径（`db.port`）。

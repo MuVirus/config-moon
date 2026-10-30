@@ -58,8 +58,7 @@ pub impl @config.Format for XmlFormat with fn decode(
   bytes : Bytes,
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
-    _ =>
-      raise @config.ConfigError::ParseError("XML 内容不是合法的 UTF-8")
+    _ => raise @config.ConfigError::ParseError("XML content is not valid UTF-8")
   }
   parse_xml(text)
 }
@@ -321,7 +320,7 @@ fn text_to_value(
       @string.parse_int64(trimmed) catch {
         _ =>
           raise @config.ConfigError::ParseError(
-            "整数 \{trimmed} 超出 Int64 范围",
+            "integer \{trimmed} exceeds Int64 range",
           )
       },
     )
@@ -331,7 +330,7 @@ fn text_to_value(
       @string.parse_double(trimmed) catch {
         _ =>
           raise @config.ConfigError::ParseError(
-            "\{trimmed} 不是合法的浮点数",
+            "\{trimmed} is not a valid float",
           )
       },
     )
@@ -407,14 +406,14 @@ fn xml_error_text(e : @xml.XmlError) -> String {
   match e {
     @xml.XmlError::At(error~, span~) => {
       let detail = match error {
-        @xml.XmlErrorKind::UnexpectedEof => "文档意外结束"
-        @xml.XmlErrorKind::InvalidSyntax(m) => "语法错误：\{m}"
+        @xml.XmlErrorKind::UnexpectedEof => "unexpected end of document"
+        @xml.XmlErrorKind::InvalidSyntax(m) => "syntax error: \{m}"
         @xml.XmlErrorKind::UnmatchedTag(expected~, found~) =>
-          "标签不匹配：期望 \{expected}，实际 \{found}"
-        @xml.XmlErrorKind::InvalidAttribute(m) => "属性错误：\{m}"
-        @xml.XmlErrorKind::InvalidEntity(m) => "实体错误：\{m}"
+          "mismatched tag: expected \{expected}, got \{found}"
+        @xml.XmlErrorKind::InvalidAttribute(m) => "invalid attribute: \{m}"
+        @xml.XmlErrorKind::InvalidEntity(m) => "invalid entity: \{m}"
       }
-      "第 \{span.start.line} 行第 \{span.start.column} 列：\{detail}"
+      "line \{span.start.line}, column \{span.start.column}: \{detail}"
     }
   }
 }

@@ -54,7 +54,7 @@ pub impl @config.Format for DotenvFormat with fn decode(
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
     _ =>
-      raise @config.ConfigError::ParseError(".env 内容不是合法的 UTF-8")
+      raise @config.ConfigError::ParseError(".env content is not valid UTF-8")
   }
   parse_dotenv(text)
 }
@@ -88,7 +88,7 @@ fn parse_dotenv(text : String) -> @config.Value raise @config.ConfigError {
       line = slice(line, 7, line.length()).trim()
     } else if line == "export" {
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：export 后面缺少键值对",
+        "line \{lineno}: export is missing a key-value pair",
       )
     }
     if line.length() == 0 || line.has_prefix("#") {
@@ -111,12 +111,12 @@ fn split_pair(
     Some(pair) => pair
     None =>
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：\{line} 缺 `=`",
+        "line \{lineno}: \{line} is missing '='",
       )
   }
   let name = key.trim()
   if name.length() == 0 {
-    raise @config.ConfigError::ParseError("第 \{lineno} 行：键名为空")
+    raise @config.ConfigError::ParseError("line \{lineno}: key name is empty")
   }
   (name, rest)
 }
@@ -132,13 +132,13 @@ fn key_path(
     let seg = part.trim()
     if seg.length() == 0 {
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：键名 \{key} 有空的一层",
+        "line \{lineno}: key \{key} has an empty segment",
       )
     }
     for c in seg {
       if c == ' ' || c == '\t' {
         raise @config.ConfigError::ParseError(
-          "第 \{lineno} 行：键名 \{key} 含空白",
+          "line \{lineno}: key \{key} contains whitespace",
         )
       }
     }
@@ -166,7 +166,7 @@ fn assign(
           @config.ValueKind::Table(t) => t
           k =>
             raise @config.ConfigError::ParseError(
-              "第 \{lineno} 行：\{seg} 已经是 \{k.name()}，不能当层级名",
+              "line \{lineno}: \{seg} is already \{k.name()} and cannot be used as a path segment",
             )
         }
       None => {
@@ -224,16 +224,16 @@ fn parse_quoted(
     i += 1
   }
   if end < 0 {
-    let quote = if double { "双" } else { "单" }
+    let quote = if double { "double" } else { "single" }
     raise @config.ConfigError::ParseError(
-      "第 \{lineno} 行：\{quote}引号没有闭合",
+      "line \{lineno}: unterminated \{quote} quote",
     )
   }
   let content = slice(text, 1, end)
   let tail = slice(text, end + 1, text.length()).trim()
   if tail.length() > 0 && !tail.has_prefix("#") {
     raise @config.ConfigError::ParseError(
-      "第 \{lineno} 行：引号结束后还有内容 \{tail}",
+      "line \{lineno}: unexpected content after closing quote: \{tail}",
     )
   }
   if double {
@@ -315,7 +315,7 @@ fn infer_scalar(
       @string.parse_double(s) catch {
         _ =>
           raise @config.ConfigError::ParseError(
-            "第 \{lineno} 行：\{s} 不是合法的浮点数",
+            "line \{lineno}: \{s} is not a valid float",
           )
       },
     )
@@ -329,7 +329,7 @@ fn int_of(s : StringView, lineno : Int32) -> Int64 raise @config.ConfigError {
   @string.parse_int64(s) catch {
     _ =>
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：整数 \{s} 超出 Int64 范围",
+        "line \{lineno}: integer \{s} exceeds Int64 range",
       )
   }
 }

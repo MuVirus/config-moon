@@ -52,20 +52,20 @@ fn main raise {
     on_error=fn(error) { println("on_error: \{error}") },
   )
 
-  show("初始", live.current())
-  println("没改文件，poll() = \{watcher.poll()}")
+  show("initial", live.current())
+  println("no file change, poll() = \{watcher.poll()}")
 
   write_port(6543)
-  println("改了文件，poll() = \{watcher.poll()}")
-  show("当前", live.current())
+  println("file changed, poll() = \{watcher.poll()}")
+  show("current", live.current())
 
   @fs.write_string_to_file(demo_path(), "not json")
-  println("写了坏配置，poll() = \{watcher.poll()}")
-  show("仍然是旧值", live.current())
+  println("bad config written, poll() = \{watcher.poll()}")
+  show("still the old value", live.current())
 
   write_port(7000)
-  println("修好以后，poll() = \{watcher.poll()}")
-  show("当前", live.current())
+  println("fixed, poll() = \{watcher.poll()}")
+  show("current", live.current())
 
   watcher.stop()
   println("stopped = \{watcher.is_stopped()}")

@@ -11,7 +11,7 @@ test "key_path splits and lowercases" {
 test "key_path rejects an empty layer" {
   let message = try {
     ignore(key_path("A__B", "APP_A__B"))
-    "没有报错"
+    "no error"
   } catch {
     @config.ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -27,7 +27,7 @@ test "assign rejects two variables on one path" {
   assign(root, seen, ["db", "port"], "APP_DB_PORT", @config.Value::int(1L))
   let message = try {
     assign(root, seen, ["db", "port"], "APP_db_port", @config.Value::int(2L))
-    "没有报错"
+    "no error"
   } catch {
     @config.ConfigError::ParseError(message) => message
     e => e.to_string()

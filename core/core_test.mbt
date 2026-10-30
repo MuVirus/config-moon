@@ -37,7 +37,7 @@ test "merge later source wins, tables merge per key" {
 }
 
 ///|
-/// 数组整体替换，不拼接
+/// array整体替换，不拼接
 test "array is replaced, not concatenated" {
   let base = MemorySource::new(
     Value::table({ "hosts": Value::array([Value::str("a"), Value::str("b")]) }),
@@ -61,12 +61,12 @@ test "missing key raises MissingKey" {
     .build()
   let message = try {
     ignore(cfg.get_string("db.user"))
-    "没有报错"
+    "no error"
   } catch {
-    ConfigError::MissingKey(path) => "缺少 \{path}"
+    ConfigError::MissingKey(path) => "missing \{path}"
     e => e.to_string()
   }
-  assert_eq(message, "缺少 db.user")
+  assert_eq(message, "missing db.user")
 }
 
 ///|
@@ -81,13 +81,13 @@ test "wrong type raises TypeMismatch" {
     .build()
   let message = try {
     ignore(cfg.get_int("db.host"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
-      "\{path}: 期望 \{expected}，实际 \{actual}"
+      "\{path}: expected \{expected}, got \{actual}"
     e => e.to_string()
   }
-  assert_eq(message, "db.host: 期望 Int，实际 Str")
+  assert_eq(message, "db.host: expected Int, got Str")
 }
 
 ///|
@@ -102,28 +102,28 @@ test "getters report expected and actual" {
     .build()
   assert_eq(
     type_error_of("Str", () => ignore(cfg.get_string("n"))),
-    "n: 期望 Str，实际 Int",
+    "n: expected Str, got Int",
   )
   assert_eq(
     type_error_of("Int", () => ignore(cfg.get_int("s"))),
-    "s: 期望 Int，实际 Str",
+    "s: expected Int, got Str",
   )
   assert_eq(
     type_error_of("Bool", () => ignore(cfg.get_bool("s"))),
-    "s: 期望 Bool，实际 Str",
+    "s: expected Bool, got Str",
   )
   assert_eq(
     type_error_of("Float", () => ignore(cfg.get_float("s"))),
-    "s: 期望 Float，实际 Str",
+    "s: expected Float, got Str",
   )
   assert_eq(
     type_error_of("Bytes", () => ignore(cfg.get_bytes("s"))),
-    "s: 期望 Bytes，实际 Str",
+    "s: expected Bytes, got Str",
   )
 }
 
 ///|
-/// 字节串原样取出来
+/// byte string原样取出来
 test "get_bytes returns the raw bytes" {
   let cfg = Config::new()
     .add(
@@ -140,13 +140,13 @@ struct EchoFormat {}
 ///|
 impl @config.Format for EchoFormat with fn decode(_ : EchoFormat, bytes : Bytes) -> Value raise ConfigError {
   let text = @utf8.decode(bytes) catch {
-    _ => raise ConfigError::ParseError("不是合法的 UTF-8")
+    _ => raise ConfigError::ParseError("invalid UTF-8")
   }
   Value::str(text)
 }
 
 ///|
-/// 文本先编码成字节，再交给格式
+/// text先编码成字节，再交给格式
 test "StringSource encodes text before decoding" {
   let source = StringSource::new("hello", EchoFormat::{ })
   assert_eq(@config.Source::collect(source).value, Value::str("hello"))
@@ -164,13 +164,13 @@ test "BytesSource passes bytes through" {
 fn type_error_of(expected : String, f : () -> Unit raise ConfigError) -> String {
   try {
     f()
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, e, actual) =>
       if e == expected {
-        "\{path}: 期望 \{e}，实际 \{actual}"
+        "\{path}: expected \{e}, got \{actual}"
       } else {
-        "报的不是 \{expected}，而是 \{e}"
+        "expected \{expected}, got \{e}"
       }
     e => e.to_string()
   }
@@ -302,7 +302,7 @@ test "FirstWins keeps the earlier value" {
 }
 
 ///|
-/// ByKind：数组里越靠前越优先，同一档内后加的赢
+/// ByKind：array里越靠前越优先，同一档内后加的赢
 test "ByKind ranks sources by kind" {
   let env = kinded(
     Value::table({ "a": Value::int(3L) }),
@@ -366,7 +366,7 @@ test "source without origin reports none" {
 }
 
 ///|
-/// 文本和字节来源都归到 `Custom`，标签说明是哪种
+/// text和字节来源都归到 `Custom`，标签说明是哪种
 test "StringSource and BytesSource report their labels" {
   let text_layer = @config.Source::collect(
     StringSource::new("hello", EchoFormat::{ }),
@@ -389,7 +389,7 @@ test "StringSource and BytesSource report their labels" {
 }
 
 ///|
-/// origins() 把数组当叶子，不再往里拆下标
+/// origins() 把array当叶子，不再往里拆下标
 test "origins treats arrays as leaves" {
   let cfg = Config::new()
     .add(
@@ -447,13 +447,13 @@ test "origin_of returns none when the path crosses a scalar" {
     .build()
   let result = try {
     match cfg.origin_of("a.b") {
-      None => "没有来源"
-      Some(_) => "不该有来源"
+      None => "no origin"
+      Some(_) => "unexpected origin"
     }
   } catch {
-    e => "不该报错：\{e}"
+    e => "unexpected error: \{e}"
   }
-  assert_eq(result, "没有来源")
+  assert_eq(result, "no origin")
 }
 
 ///|
@@ -471,11 +471,11 @@ test "Value::from_literal infers bool, int, float and string" {
 }
 
 ///|
-/// 整数超出 `Int64` 时报错，不静默降级成浮点或字符串
+/// integer超出 `Int64` 时报错，不静默降级成浮点或字符串
 test "Value::from_literal reports integer overflow" {
   let message = try {
     ignore(Value::from_literal("99999999999999999999"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()

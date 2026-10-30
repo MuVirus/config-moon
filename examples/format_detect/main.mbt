@@ -48,6 +48,6 @@ fn main raise {
   show("examples/format_detect/config/legacy.yaml")
   show("examples/format_detect/config/feature.conf")
   show("examples/format_detect/config/notes.txt") catch {
-    error => println("预期内的失败：\{error}")
+    error => println("expected failure: \{error}")
   }
 }

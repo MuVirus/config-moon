@@ -22,7 +22,7 @@ pub fn Value::from_literal(text : StringView) -> Value raise ConfigError {
   if is_float_literal(chars) {
     return Value::float(
       @string.parse_double(text) catch {
-        _ => raise ConfigError::ParseError("\{text} 不是合法的浮点数")
+        _ => raise ConfigError::ParseError("\{text} is not a valid float")
       },
     )
   }
@@ -33,7 +33,7 @@ pub fn Value::from_literal(text : StringView) -> Value raise ConfigError {
 /// 整数按 `Int64` 解析，大整数不丢；超出范围报错。
 fn parse_int(text : StringView) -> Int64 raise ConfigError {
   @string.parse_int64(text) catch {
-    _ => raise ConfigError::ParseError("\{text} 超出 Int64 范围")
+    _ => raise ConfigError::ParseError("integer \{text} exceeds Int64 range")
   }
 }
 

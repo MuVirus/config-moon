@@ -384,7 +384,7 @@ fn explain(
   if message.has_prefix(marker) {
     let field = message[marker.length():].to_owned()
     return @config.ConfigError::MissingKey(
-      if key == "(根)" {
+      if key == "(root)" {
         field
       } else {
         "\{key}.\{field}"
@@ -394,17 +394,17 @@ fn explain(
   let expected = expected_name(message)
   let actual = match value_at(v, segments) {
     Some(found) => found.kind.name()
-    None => "未知"
+    None => "unknown"
   }
   if message.contains("number in string representation") {
     // 结构体里写了 `Int64`：换个类型就能取，不是数据的问题
     return @config.ConfigError::ParseError(
-      "配置项 \{key} 是 64 位整数：结构体字段请声明为 Int64Text，或改用 get_int",
+      "key '\{key}' is a 64-bit integer: declare the struct field as Int64Text or use get_int",
     )
   }
   if message.contains("overflow") {
     return @config.ConfigError::ParseError(
-      "配置项 \{key} 超出 \{expected} 范围",
+      "key '\{key}' is out of range for \{expected}",
     )
   }
   @config.ConfigError::TypeMismatch(key, expected, actual)
@@ -458,7 +458,7 @@ fn join_key(prefix : String, segments : Array[String]) -> String {
     key = if key == "" { segment } else { "\{key}.\{segment}" }
   }
   if key == "" {
-    "(根)"
+    "(root)"
   } else {
     key
   }

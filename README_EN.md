@@ -89,7 +89,7 @@ let cfg = Config::new()
   .build()
 
 cfg.get_string("db.port")   // "5432"
-cfg.get_int("db.port")      // error: 配置项 db.port 类型不符：期望 Int，实际 Str
+cfg.get_int("db.port")      // error: key 'db.port': expected Int, got Str
 
 struct TextPort {
   port : String
@@ -338,8 +338,8 @@ try {
 }
 ```
 
-The code above prints `配置项 db.host 类型不符：期望 Int，实际 Str`; a missing
-key prints `配置项 db.user 不存在：没有任何来源提供它`.
+The code above prints `key 'db.host': expected Int, got Str`; a missing key
+prints `missing key 'db.user': no source provides it`.
 
 `extract_from` fails the same way: a missing field raises `MissingKey`, a type
 mismatch raises `TypeMismatch`, and the path includes the config path (`db.port`).

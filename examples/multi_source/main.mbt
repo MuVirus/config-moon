@@ -69,7 +69,7 @@ fn build_config() -> Config raise {
 fn show(origin : Origin?) -> String {
   match origin {
     Some(origin) => "\{origin.label()}"
-    None => "（没有来源）"
+    None => "(no origin)"
   }
 }
 
@@ -78,7 +78,7 @@ fn main raise {
   seed_env()
   let cfg = build_config()
 
-  println("== 生效的值 ==")
+  println("== Effective values ==")
   println("db.host    = \{cfg.get_string("db.host")}")
   println("db.port    = \{cfg.get_int("db.port")}")
   println("db.password= \{cfg.get_string("db.password")}")
@@ -86,7 +86,7 @@ fn main raise {
   println("feature.debug = \{cfg.get_bool("feature.debug")}")
 
   println("")
-  println("== 每个值来自哪一层 ==")
+  println("== Origin of each value ==")
   println("db.host       <- \{show(cfg.origin_of("db.host"))}")
   println("db.port       <- \{show(cfg.origin_of("db.port"))}")
   println("db.password   <- \{show(cfg.origin_of("db.password"))}")
@@ -94,7 +94,7 @@ fn main raise {
   println("feature.debug <- \{show(cfg.origin_of("feature.debug"))}")
 
   println("")
-  println("== --print-config 会列出什么 ==")
+  println("== What --print-config would list ==")
   let origins = cfg.origins()
   for origin in origins {
     println("\{origin.path().to_string()}  \{origin.label()}")

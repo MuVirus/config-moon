@@ -15,7 +15,7 @@ pub impl @config.Format for JsonFormat with fn decode(
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
     _ =>
-      raise @config.ConfigError::ParseError("JSON 内容不是合法的 UTF-8")
+      raise @config.ConfigError::ParseError("JSON content is not valid UTF-8")
   }
   // 保留每个数字的原文：核心库默认只在超出 Double 精确范围时才留 `repr`，
   // 那会把 `1.0`、`1e2` 这种浮点写法误判成整数。
@@ -111,7 +111,7 @@ fn int64_of(literal : String) -> Int64 raise @config.ConfigError {
   if big.compare_int64(9223372036854775807L) > 0 ||
     big.compare_int64(-9223372036854775808L) < 0 {
     raise @config.ConfigError::ParseError(
-      "整数 \{literal} 超出 Int64 范围",
+      "integer \{literal} exceeds Int64 range",
     )
   }
   big.to_int64()

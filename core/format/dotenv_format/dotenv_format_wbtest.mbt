@@ -63,12 +63,12 @@ test "trailing comment after quoted value" {
 test "junk after quoted value reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a = \"value\" junk\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：引号结束后还有内容 junk")
+  assert_eq(message, "line 1: unexpected content after closing quote: junk")
 }
 
 ///|
@@ -76,12 +76,12 @@ test "junk after quoted value reports ParseError" {
 test "unterminated quote reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a = \"value\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：双引号没有闭合")
+  assert_eq(message, "line 1: unterminated double quote")
 }
 
 ///|
@@ -103,34 +103,32 @@ test "export prefix" {
 test "bare export reports ParseError" {
   let message = try {
     ignore(parse_dotenv("export\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：export 后面缺少键值对")
+  assert_eq(message, "line 1: export is missing a key-value pair")
 }
 
 ///|
-/// 大整数不丢
+/// 大integer不丢
 test "big integers survive" {
   let v = parse_dotenv("id = 9007199254740993\n")
   assert_eq(v, Value::table({ "id": Value::int(9007199254740993L) }))
 }
 
 ///|
-/// 整数溢出 Int64 报错，不静默截断
+/// integer溢出 Int64 报错，不静默截断
 test "integer overflow reports ParseError" {
   let message = try {
     ignore(parse_dotenv("id = 99999999999999999999\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(
-    message, "第 1 行：整数 99999999999999999999 超出 Int64 范围",
-  )
+  assert_eq(message, "line 1: integer 99999999999999999999 exceeds Int64 range")
 }
 
 ///|
@@ -166,7 +164,7 @@ test "number-ish strings stay strings" {
 }
 
 ///|
-/// 只有 `true` / `false` 是布尔，其它拼法都按字符串
+/// 只有 `true` / `false` 是boolean，其它拼法都按字符串
 test "only true and false are booleans" {
   let v = parse_dotenv("a = true\nb = TRUE\nc = yes\nd = false\n")
   assert_eq(
@@ -181,7 +179,7 @@ test "only true and false are booleans" {
 }
 
 ///|
-/// 空值是空字符串，不是 Null
+/// null是empty string，不是 Null
 test "empty value is an empty string" {
   let v = parse_dotenv("a =\nb = \"\"\n")
   assert_eq(v, Value::table({ "a": Value::str(""), "b": Value::str("") }))
@@ -211,12 +209,14 @@ test "dotted keys nest" {
 test "scalar shadowed by nesting reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a = 1\na.b = 2\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 2 行：a 已经是 Int，不能当层级名")
+  assert_eq(
+    message, "line 2: a is already Int and cannot be used as a path segment",
+  )
 }
 
 ///|
@@ -231,12 +231,12 @@ test "scalar replaces an earlier table" {
 test "empty key layer reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a..b = 1\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：键名 a..b 有空的一层")
+  assert_eq(message, "line 1: key a..b has an empty segment")
 }
 
 ///|
@@ -244,36 +244,36 @@ test "empty key layer reports ParseError" {
 test "whitespace in key reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a b = 1\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：键名 a b 含空白")
+  assert_eq(message, "line 1: key a b contains whitespace")
 }
 
 ///|
 test "missing equals reports ParseError" {
   let message = try {
     ignore(parse_dotenv("a\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：a 缺 `=`")
+  assert_eq(message, "line 1: a is missing '='")
 }
 
 ///|
 test "empty key reports ParseError" {
   let message = try {
     ignore(parse_dotenv(" = value\n"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()
   }
-  assert_eq(message, "第 1 行：键名为空")
+  assert_eq(message, "line 1: key name is empty")
 }
 
 ///|

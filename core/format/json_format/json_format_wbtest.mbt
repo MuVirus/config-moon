@@ -14,7 +14,7 @@ struct NeedsHost {
 pub extend NeedsHost with @json.FromJson::{from_json}
 
 ///|
-/// 只用来验证字节串能提取到结构体的 `Bytes` 字段
+/// 只用来验证byte string能提取到结构体的 `Bytes` 字段
 struct NeedsBlob {
   blob : Bytes
 } derive(@json.FromJson)
@@ -33,7 +33,7 @@ struct NestedNeedsHost {
 pub extend NestedNeedsHost with @json.FromJson::{from_json}
 
 ///|
-/// 整型数组，用来验证浮点探针会递归进数组
+/// 整型array，用来验证浮点探针会递归进array
 #warnings("-unused_field")
 struct IntArrayCfg {
   values : Array[Int32]
@@ -43,7 +43,7 @@ struct IntArrayCfg {
 pub extend IntArrayCfg with @json.FromJson::{from_json}
 
 ///|
-/// 数组字段，用来验证对象/数组形状错误
+/// array字段，用来验证对象/array形状错误
 #warnings("-unused_field")
 struct StringListCfg {
   values : Array[String]
@@ -65,11 +65,11 @@ test "extract reads bytes into a Bytes field" {
 test "string is not extracted as Bytes" {
   let message = try {
     let _ : NeedsBlob = extract(Value::table({ "blob": Value::str("hello") }))
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 blob 类型不符：期望 Bytes，实际 Str")
+  assert_eq(message, "key 'blob': expected Bytes, got Str")
 }
 
 ///|
@@ -79,11 +79,11 @@ test "Bytes are not extracted as String" {
     let _ : NeedsHost = extract(
       Value::table({ "host": Value::bytes(b"hello") }),
     )
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(message, "配置项 host 类型不符：期望 Str，实际 Bytes")
+  assert_eq(message, "key 'host': expected Str, got Bytes")
 }
 
 ///|
@@ -98,16 +98,16 @@ test "special float strings stay strings" {
 test "decode rejects invalid UTF-8" {
   let message = try {
     ignore(JsonFormat::new().decode(b"\xff"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     error => error.to_string()
   }
-  assert_eq(message, "JSON 内容不是合法的 UTF-8")
+  assert_eq(message, "JSON content is not valid UTF-8")
 }
 
 ///|
-/// sniff 跳过前导空白，空白串和标量根都不算 JSON 对象/数组
+/// sniff 跳过前导空白，空白串和标量根都不算 JSON 对象/array
 test "sniff skips leading whitespace" {
   let format = JsonFormat::new()
   assert_true(format.sniff(b" \t\r\n{\"a\":1}"))
@@ -117,7 +117,7 @@ test "sniff skips leading whitespace" {
 }
 
 ///|
-/// Json::False 也要映射成 Bool(false)
+/// Json::False 也要map成 Bool(false)
 test "json_to_value decodes false" {
   let value = json_to_value(@json.parse("false"))
   assert_eq(value.kind, ValueKind::Bool(false))
@@ -130,17 +130,15 @@ test "extract reports nested missing field" {
     let _ : NestedNeedsHost = extract(
       Value::table({ "db": Value::table({ "other": Value::int(1L) }) }),
     )
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    message, "配置项 db.host 不存在：没有任何来源提供它",
-  )
+  assert_eq(message, "missing key 'db.host': no source provides it")
 }
 
 ///|
-/// 数组里的浮点也必须被浮点探针拦住，不能只检查表字段
+/// array里的浮点也必须被浮点探针拦住，不能只检查表字段
 test "extract rejects float inside Int array" {
   let value = Value::table({
     "values": Value::array([Value::int(1L), Value::float(2.5)]),
@@ -148,17 +146,15 @@ test "extract rejects float inside Int array" {
   assert_true(has_float(value))
   let message = try {
     let _ : IntArrayCfg = extract(value)
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    message, "配置项 values.1 类型不符：期望 Int，实际 Float",
-  )
+  assert_eq(message, "key 'values.1': expected Int, got Float")
 }
 
 ///|
-/// Json → Value：整数、浮点、大整数、嵌套结构都要按规矩拆
+/// Json → Value：integer、浮点、大integer、嵌套结构都要按规矩拆
 test "json_to_value" {
   let json = @json.parse(
     "{\"i\": -42, \"f\": 1.5, \"t\": true, \"big\": 9007199254740993, \"n\": null, \"a\": [1, \"x\"]}",
@@ -177,7 +173,7 @@ test "json_to_value" {
 }
 
 ///|
-/// 有没有小数点／指数决定形状：值是整数也必须留作 Float
+/// 有没有小数点／指数决定形状：值是integer也必须留作 Float
 test "json_to_value keeps integral floats as Float" {
   let value = json_to_value(
     @json.parse(
@@ -192,14 +188,14 @@ test "json_to_value keeps integral floats as Float" {
 }
 
 ///|
-/// 没有原文时按浮点处理，不能靠数值是否完整反推成整数
+/// 没有原文时按浮点处理，不能靠数值是否完整反推成integer
 test "json_to_value without repr stays Float" {
   let value = json_to_value(@json.parse("1.0"))
   assert_eq(value.kind, ValueKind::Float(1.0))
 }
 
 ///|
-/// 塞不进 Int64 的整数直接报错，不静默截断
+/// 塞不进 Int64 的integer直接报错，不静默截断
 test "json_to_value rejects oversized int" {
   let value = try {
     ignore(
@@ -216,7 +212,7 @@ test "json_to_value rejects oversized int" {
 }
 
 ///|
-/// 超范围的浮点字面量（`1e999`）要变成浮点，不能去喂整数解析器
+/// 超范围的浮点字面量（`1e999`）要变成浮点，不能去喂integer解析器
 ///
 /// 这条是被真 bug 逼出来的：`BigInt::from_string("1e999")` 不会抛错，
 /// 而是直接 `abort` 整个进程——配置里一个数字就能把程序打崩。
@@ -233,7 +229,7 @@ test "json_to_value handles oversized float" {
 }
 
 ///|
-/// 字面量分流：只有纯整数形式才喂给 Int64 解析器
+/// 字面量分流：只有纯integer形式才喂给 Int64 解析器
 test "is_integer_literal" {
   assert_true(is_integer_literal("0"))
   assert_true(is_integer_literal("-42"))
@@ -314,33 +310,29 @@ test "extract reports shape mismatch" {
 }
 
 ///|
-/// 对象/数组形状错误也要走 expected_name 的 Table / Array 分支
+/// 对象/array形状错误也要走 expected_name 的 Table / Array 分支
 test "extract reports object and array shape mismatches" {
   let object_message = try {
     let _ : NeedsHost = extract(Value::array([Value::int(1L)]))
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    object_message, "配置项 (根) 类型不符：期望 Table，实际 Array",
-  )
+  assert_eq(object_message, "key '(root)': expected Table, got Array")
 
   let array_message = try {
     let _ : StringListCfg = extract(
       Value::table({ "values": Value::str("not-an-array") }),
     )
-    "没有报错"
+    "no error"
   } catch {
     error => error.to_string()
   }
-  assert_eq(
-    array_message, "配置项 values 类型不符：期望 Array，实际 Str",
-  )
+  assert_eq(array_message, "key 'values': expected Array, got Str")
 }
 
 ///|
-/// 64 位包装类型只认整数，字符串和浮点都不收
+/// 64 位包装类型只认integer，字符串和浮点都不收
 test "Int64Text rejects non-integer shapes" {
   let from_string = try {
     let bad : Int64Text = @json.from_json(Json::string("5432"))
@@ -361,7 +353,7 @@ test "Int64Text rejects non-integer shapes" {
 }
 
 ///|
-/// 大整数、负数和 UInt64 都按原文还原
+/// 大integer、负数和 UInt64 都按原文还原
 test "Int64Text and UInt64Text parse exactly" {
   let big : Int64Text = @json.from_json(
     to_json(Value::int(-9223372036854775807L)),

@@ -3,7 +3,7 @@
 // Keep them focused; public behavior belongs in `_test.mbt`.
 
 ///|
-/// 合并的三条规则：后覆盖前、表逐 key 合、数组整体换
+/// 合并的三条规则：后覆盖前、表逐 key 合、array整体换
 test "merge rules" {
   let base = Value::table({
     "db": Value::table({
@@ -56,7 +56,7 @@ test "get_path on scalar reports TypeMismatch" {
   let value = Value::table({ "a": Value::int(1L) })
   let message = try {
     ignore(value.get_path("a.b"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -83,23 +83,23 @@ test "kind name" {
 test "config error messages" {
   assert_eq(
     ConfigError::MissingKey("db.user").to_string(),
-    "配置项 db.user 不存在：没有任何来源提供它",
+    "missing key 'db.user': no source provides it",
   )
   assert_eq(
     ConfigError::TypeMismatch("db.host", "Int", "Str").to_string(),
-    "配置项 db.host 类型不符：期望 Int，实际 Str",
+    "key 'db.host': expected Int, got Str",
   )
   assert_eq(
-    ConfigError::ParseError("坏文本").to_string(),
-    "解析失败：坏文本",
+    ConfigError::ParseError("bad text").to_string(),
+    "parse error: bad text",
   )
   assert_eq(
-    ConfigError::IoError("文件 config.json：找不到").to_string(),
-    "读取失败：文件 config.json：找不到",
+    ConfigError::IoError("file config.json: not found").to_string(),
+    "read error: file config.json: not found",
   )
   assert_eq(
     ConfigError::MergeConflict("db", "Table", "Str").to_string(),
-    "配置项 db 合并冲突：Table 与 Str",
+    "merge conflict at key 'db': Table vs Str",
   )
 }
 
@@ -135,7 +135,7 @@ fn test_site(kind : SourceKind, label : String) -> &OriginSite {
 }
 
 ///|
-/// 树里每个节点（含表节点、数组节点）的路径和来源标签
+/// 树里每个节点（含表节点、array节点）的路径和来源标签
 fn node_origins(
   value : Value,
   prefix : String,
@@ -185,7 +185,7 @@ test "merge keeps the overriding table origin" {
 }
 
 ///|
-/// attach_origin 递归到底：表节点、数组节点、数组元素都带来源
+/// attach_origin 递归到底：表节点、array节点、array元素都带来源
 test "attach_origin marks table and array nodes" {
   let value = attach_origin(
     Value::table({
@@ -203,7 +203,7 @@ test "attach_origin marks table and array nodes" {
 }
 
 ///|
-/// 没有来源就原样返回，不凭空造一层
+/// no origin就原样返回，不凭空造一层
 test "attach_origin without origin leaves the tree alone" {
   let value = attach_origin(
     Value::table({ "a": Value::table({ "b": Value::int(1L) }) }),

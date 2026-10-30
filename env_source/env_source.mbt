@@ -96,7 +96,7 @@ pub impl @config.Source for EnvSource with fn collect(self : EnvSource) -> @conf
     let value = @config.Value::from_literal(raw) catch {
       @config.ConfigError::ParseError(message) =>
         raise @config.ConfigError::ParseError(
-          "环境变量 \{name}：\{message}",
+          "environment variable \{name}: \{message}",
         )
       error => raise error
     }
@@ -145,7 +145,7 @@ fn push_segment(
   let text = segment.to_string()
   if text.length() == 0 {
     raise @config.ConfigError::ParseError(
-      "环境变量 \{name}：键名有空的层级",
+      "environment variable \{name}: key has an empty segment",
     )
   }
   path.push(text)
@@ -175,7 +175,7 @@ fn assign(
           k => {
             let owner = seen.get(joined).unwrap_or("?")
             raise @config.ConfigError::ParseError(
-              "环境变量 \{name}：\{joined} 已经是 \{k.name()}（由 \{owner} 提供），不能当层级名",
+              "environment variable \{name}: \{joined} is already \{k.name()} (provided by \{owner}) and cannot be used as a path segment",
             )
           }
         }
@@ -194,7 +194,7 @@ fn assign(
     Some(other) =>
       if other != name {
         raise @config.ConfigError::ParseError(
-          "环境变量 \{name} 和 \{other} 都指向 \{joined}",
+          "environment variables \{name} and \{other} both map to \{joined}",
         )
       }
     None => ()

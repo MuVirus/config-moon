@@ -40,7 +40,7 @@ pub extend TextualPort with @json.FromJson::{from_json}
 /// 取整数；失败时把错误原文带回来，方便直接看提示
 fn read_int(cfg : Config, path : String) -> String {
   cfg.get_int(path).to_string() catch {
-    e => "报错：\{e}"
+    e => "error: \{e}"
   }
 }
 
@@ -48,7 +48,7 @@ fn read_int(cfg : Config, path : String) -> String {
 /// 取字符串；失败时把错误原文带回来
 fn read_str(cfg : Config, path : String) -> String {
   cfg.get_string(path) catch {
-    e => "报错：\{e}"
+    e => "error: \{e}"
   }
 }
 
@@ -57,9 +57,9 @@ fn read_str(cfg : Config, path : String) -> String {
 fn read_numeric(cfg : Config) -> String {
   try {
     let v : NumericPort = extract_from(cfg, "db")
-    "port = \{v.port}，name = \{v.name}"
+    "port = \{v.port}, name = \{v.name}"
   } catch {
-    e => "报错：\{e}"
+    e => "error: \{e}"
   }
 }
 
@@ -68,9 +68,9 @@ fn read_numeric(cfg : Config) -> String {
 fn read_textual(cfg : Config) -> String {
   try {
     let v : TextualPort = extract_from(cfg, "db")
-    "port = \"\{v.port}\"，name = \{v.name}"
+    "port = \"\{v.port}\", name = \{v.name}"
   } catch {
-    e => "报错：\{e}"
+    e => "error: \{e}"
   }
 }
 
@@ -98,11 +98,11 @@ fn main raise {
   let n_str = read_str(numeric, "db.port")
   let t_str = read_str(textual, "db.port")
 
-  println("== 按键取值 ==")
-  println("数字来源   get_int    -> \{n_int}") // 5432
-  println("字符串来源 get_int    -> \{t_int}") // 报错：期望 Int，实际 Str
-  println("数字来源   get_string -> \{n_str}") // 报错：期望 Str，实际 Int
-  println("字符串来源 get_string -> \{t_str}") // "5432"
+  println("== Read by key ==")
+  println("numeric source get_int    -> \{n_int}") // 5432
+  println("string source  get_int    -> \{t_int}") // error: expected Int, got Str
+  println("numeric source get_string -> \{n_str}") // error: expected Str, got Int
+  println("string source  get_string -> \{t_str}") // "5432"
 
   let n_num = read_numeric(numeric)
   let t_num = read_numeric(textual)
@@ -110,9 +110,9 @@ fn main raise {
   let t_txt = read_textual(textual)
 
   println("")
-  println("== 提取到结构体 ==")
-  println("数字来源   -> NumericPort  \{n_num}") // port = 5432，name = main
-  println("数字来源   -> TextualPort  \{n_txt}") // 报错：配置项 db.port 类型不符：期望 Str，实际 Int
-  println("字符串来源 -> NumericPort  \{t_num}") // 报错：配置项 db.port 类型不符：期望 Int，实际 Str
-  println("字符串来源 -> TextualPort  \{t_txt}") // port = "5432"，name = main
+  println("== Extract into struct ==")
+  println("numeric source -> NumericPort \{n_num}") // port = 5432, name = main
+  println("numeric source -> TextualPort \{n_txt}") // error: key 'db.port': expected Str, got Int
+  println("string source  -> NumericPort \{t_num}") // error: key 'db.port': expected Int, got Str
+  println("string source  -> TextualPort \{t_txt}") // port = "5432", name = main
 }

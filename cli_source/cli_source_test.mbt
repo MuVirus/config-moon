@@ -45,7 +45,7 @@ test "CliSource lets the later argument win" {
 test "CliSource rejects malformed keys" {
   let message = try {
     ignore(config_of(["--a..b=1"]))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -58,7 +58,7 @@ test "CliSource rejects malformed keys" {
 test "CliSource reports a scalar shadowing a branch" {
   let message = try {
     ignore(config_of(["--a=1", "--a.b=2"]))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -80,11 +80,11 @@ test "CliSource labels leaves without their values" {
 }
 
 ///|
-/// 整数超出 `Int64` 时报错，消息里带参数名
+/// integer超出 `Int64` 时报错，消息里带参数名
 test "CliSource reports integer overflow with the argument name" {
   let message = try {
     ignore(config_of(["--big=99999999999999999999"]))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -98,7 +98,7 @@ test "CliSource reports integer overflow with the argument name" {
 test "CliSource rejects a scalar replacing a branch" {
   let message = try {
     ignore(config_of(["--a.b=1", "--a=2"]))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()

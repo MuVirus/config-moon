@@ -40,7 +40,7 @@ test "EnvSource reads prefixed variables as nested values" {
   assert_eq(cfg.get_string("empty"), "")
   let message = try {
     ignore(cfg.get_string("other"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -86,7 +86,7 @@ test "EnvSource ignores variables outside the prefix" {
   assert_eq(cfg.get_int("inside"), 1L)
   let message = try {
     ignore(cfg.get_string("outside"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -96,7 +96,7 @@ test "EnvSource ignores variables outside the prefix" {
 }
 
 ///|
-/// `-1` 这种负数是整数，不是字符串
+/// `-1` 这种负数是integer，不是字符串
 test "EnvSource reads negative integers" {
   set_vars([("MOONFIG_NEG_VALUE", "-7")])
   let cfg = Config::new().add(EnvSource::new("MOONFIG_NEG_")).build()
@@ -110,7 +110,7 @@ test "EnvSource reports a scalar shadowing a branch" {
   set_vars([("MOONFIG_CLASH_DB", "1"), ("MOONFIG_CLASH_DB_PORT", "2")])
   let message = try {
     ignore(Config::new().add(EnvSource::new("MOONFIG_CLASH_")).build())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -121,12 +121,12 @@ test "EnvSource reports a scalar shadowing a branch" {
 }
 
 ///|
-/// 整数超出 `Int64` 时报错，消息里带变量名
+/// integer超出 `Int64` 时报错，消息里带变量名
 test "EnvSource reports integer overflow with the variable name" {
   set_vars([("MOONFIG_OVERFLOW_VALUE", "99999999999999999999")])
   let message = try {
     ignore(Config::new().add(EnvSource::new("MOONFIG_OVERFLOW_")).build())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()
@@ -147,7 +147,7 @@ test "EnvSource rejects malformed names" {
   set_vars([("MOONFIG_BAD2_A__B", "1")])
   let message = try {
     ignore(Config::new().add(EnvSource::new("MOONFIG_BAD2_")).build())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(message) => message
     e => e.to_string()

@@ -13,7 +13,7 @@ struct TextFormat {}
 ///|
 impl @config.Format for TextFormat with fn decode(_ : TextFormat, bytes : Bytes) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
-    _ => raise @config.ConfigError::ParseError("文件不是合法的 UTF-8")
+    _ => raise @config.ConfigError::ParseError("file is not valid UTF-8")
   }
   @config.Value::table({ "text": @config.Value::str(text) })
 }
@@ -73,7 +73,7 @@ test "FileSource reports IoError when the file is missing" {
   let message = try {
     let source = FileSource::new(path, TextFormat::{ })
     ignore(@config.Source::collect(source))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::IoError(message) => message
     e => e.to_string()

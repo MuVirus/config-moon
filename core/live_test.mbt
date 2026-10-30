@@ -1,7 +1,7 @@
 // Blackbox tests for hot-reload snapshots.
 
 ///|
-/// 测试用来源：内容放在一个共享数组里，`poll` 能看到变化
+/// 测试用来源：内容放在一个共享array里，`poll` 能看到变化
 struct MutableSource {
   bytes : Array[String]
 }
@@ -48,7 +48,7 @@ impl @config.Source for MutableSource with fn raw_locator(self : MutableSource) 
 impl @config.Source for MutableSource with fn collect(self : MutableSource) -> @config.Layer raise @config.ConfigError {
   let text = self.bytes[0]
   if text == "bad" {
-    raise @config.ConfigError::ParseError("坏配置")
+    raise @config.ConfigError::ParseError("bad config")
   }
   @config.Layer::new(
     @config.Value::table({ "text": @config.Value::str(text) }),

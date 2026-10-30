@@ -43,7 +43,7 @@ test "the root element is just a shell" {
 }
 
 ///|
-/// 同名兄弟元素收成数组
+/// 同名兄弟元素收成array
 test "repeated siblings become an array" {
   let cfg = Config::new()
     .add(
@@ -113,7 +113,7 @@ test "empty xml is an empty table" {
   let cfg = Config::new().add(xml("")).build()
   let message = try {
     ignore(cfg.get_string("db.host"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::MissingKey(path) => path
     e => e.to_string()
@@ -127,7 +127,7 @@ test "wrong type reports TypeMismatch" {
   let cfg = Config::new().add(xml("<config><port>5432</port></config>")).build()
   let message = try {
     ignore(cfg.get_string("port"))
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::TypeMismatch(path, expected, actual) =>
       "\{path} \{expected} \{actual}"
@@ -141,7 +141,7 @@ test "wrong type reports TypeMismatch" {
 test "malformed xml reports ParseError" {
   let message = try {
     ignore(xml("<config><a>1</config>").collect())
-    "没有报错"
+    "no error"
   } catch {
     ConfigError::ParseError(m) => m
     e => e.to_string()

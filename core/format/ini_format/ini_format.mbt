@@ -43,8 +43,7 @@ pub impl @config.Format for IniFormat with fn decode(
   bytes : Bytes,
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
-    _ =>
-      raise @config.ConfigError::ParseError("INI 内容不是合法的 UTF-8")
+    _ => raise @config.ConfigError::ParseError("INI content is not valid UTF-8")
   }
   parse_ini(text)
 }
@@ -95,7 +94,7 @@ fn parse_section(
 ) -> Array[String] raise @config.ConfigError {
   if !line.has_suffix("]") {
     raise @config.ConfigError::ParseError(
-      "第 \{lineno} 行：段落头 \{line} 缺右方括号",
+      "line \{lineno}: section header \{line} is missing the closing ']'",
     )
   }
   let name = slice(line, 1, line.length() - 1).trim()
@@ -104,13 +103,15 @@ fn parse_section(
     let seg = part.trim()
     if seg.length() == 0 {
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：段落名 \{name} 有空的一层",
+        "line \{lineno}: section name \{name} has an empty segment",
       )
     }
     path.push(seg.to_owned())
   }
   if path.length() == 0 {
-    raise @config.ConfigError::ParseError("第 \{lineno} 行：段落名为空")
+    raise @config.ConfigError::ParseError(
+      "line \{lineno}: section name is empty",
+    )
   }
   path
 }
@@ -135,12 +136,12 @@ fn split_pair(
   }
   if !found {
     raise @config.ConfigError::ParseError(
-      "第 \{lineno} 行：\{line} 缺 `=` 或 `:`",
+      "line \{lineno}: \{line} is missing '=' or ':'",
     )
   }
   let name = key.to_string().trim()
   if name.length() == 0 {
-    raise @config.ConfigError::ParseError("第 \{lineno} 行：键名为空")
+    raise @config.ConfigError::ParseError("line \{lineno}: key name is empty")
   }
   (name.to_owned(), val.to_string().trim())
 }
@@ -161,7 +162,7 @@ fn section_table(
           @config.ValueKind::Table(t) => t
           k =>
             raise @config.ConfigError::ParseError(
-              "第 \{section_line} 行：\{seg} 已经是 \{k.name()}，不能当段落名",
+              "line \{section_line}: \{seg} is already \{k.name()} and cannot be used as a section name",
             )
         }
       None => {
@@ -199,7 +200,7 @@ fn parse_scalar(
       @string.parse_double(s) catch {
         _ =>
           raise @config.ConfigError::ParseError(
-            "第 \{lineno} 行：\{s} 不是合法的浮点数",
+            "line \{lineno}: \{s} is not a valid float",
           )
       },
     )
@@ -222,7 +223,7 @@ fn int_of(s : StringView, lineno : Int32) -> Int64 raise @config.ConfigError {
   @string.parse_int64(s) catch {
     _ =>
       raise @config.ConfigError::ParseError(
-        "第 \{lineno} 行：整数 \{s} 超出 Int64 范围",
+        "line \{lineno}: integer \{s} exceeds Int64 range",
       )
   }
 }

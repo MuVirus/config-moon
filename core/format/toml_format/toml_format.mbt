@@ -46,7 +46,7 @@ pub impl @config.Format for TomlFormat with fn decode(
 ) -> @config.Value raise @config.ConfigError {
   let text = @utf8.decode(bytes) catch {
     _ =>
-      raise @config.ConfigError::ParseError("TOML 内容不是合法的 UTF-8")
+      raise @config.ConfigError::ParseError("TOML content is not valid UTF-8")
   }
   parse_toml(text)
 }
@@ -100,7 +100,7 @@ fn parse_toml(text : String) -> @config.Value raise @config.ConfigError {
   }
   if !parsed.validate() {
     raise @config.ConfigError::ParseError(
-      "数组里的元素必须是同一种类型",
+      "array elements must all have the same type",
     )
   }
   toml_root_to_value(parsed)
@@ -115,7 +115,7 @@ fn toml_root_to_value(
     @toml.TomlValue::TomlTable(table) => toml_table_to_value(table)
     v =>
       raise @config.ConfigError::ParseError(
-        "TOML 的根节点必须是表，实际是 \{v.type_name()}",
+        "TOML root must be a table, got \{v.type_name()}",
       )
   }
 }
