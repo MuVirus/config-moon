@@ -1,10 +1,17 @@
+<div align="center">
+
+<img src="https://muvirus.github.io/%E9%A1%B9%E7%9B%AE/moonbit/moonfig/logo/moonfig.png" alt="moonbit logo" width="240">
+
 [中文](README.mbt.md) | **English**
 
 # moonfig
 
 A native configuration library for MoonBit.
 
+
 **Declare once, gather from many sources.**
+
+</div>
 
 ## Contents
 
@@ -19,8 +26,8 @@ A native configuration library for MoonBit.
 
 ## Features
 
-- **Type-safe configuration**: `derive(FromJson)` generates the deserialization for your config struct, so extracting a value yields that type directly. No code generator, no custom derive trait — MoonBit's own derive mechanism does the work
-- **Strict typing**: every read and every extraction checks the declared type; nothing is converted implicitly, and a mismatch is an error
+- **Type-safe configuration**: reuses MoonBit's native `derive(FromJson)` mechanism to extract into structs. The library maps config values to Json, translates errors and adds extra checks for easily confused types; no code generator is needed
+- **Strict conversions**: reads and extraction check the declared type and reject common cross-type spellings instead of converting implicitly; specific types (`BigInt`, a custom `FromJson`, and so on) follow their own rules
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
 - **Format detection**: `Detector` checks the file suffix first, then the content; when neither decides it raises `UnknownFormat` listing the candidate suffixes
 - **Hot reload**: `build_live()` keeps the source list, and `Watcher::poll()` detects file changes and swaps the snapshot; a bad config never takes effect
@@ -100,7 +107,7 @@ struct NumericPort {
 } derive(FromJson)
 
 let text : TextPort = extract_from(cfg, "db")       // port = "5432"
-let numeric : NumericPort = extract_from(cfg, "db") // error: expected number, got string
+let numeric : NumericPort = extract_from(cfg, "db") // error: key 'db.port': expected Int, got Str
 ```
 
 ### Read by key

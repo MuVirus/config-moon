@@ -1,10 +1,17 @@
+<div align="center">
+
+<img src="https://muvirus.github.io/%E9%A1%B9%E7%9B%AE/moonbit/moonfig/logo/moonfig.png" alt="moonbit logo" width="240">
+
 **中文** | [English](README_EN.md)
 
 # moonfig
 
 MoonBit 原生配置库
 
+
 **一处声明，多来源汇入。**
+
+</div>
 
 ## 目录
 
