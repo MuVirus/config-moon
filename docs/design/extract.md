@@ -47,7 +47,7 @@ JSON 解码打开了 `preserve_number_repr=true`，所以 `1.0`、`1e2`、`-0.0`
 
 解析侧与实测数据见 [decisions.md](../decisions/decisions.md#4-json-数值的边界)。
 
-另一个代价：`Double` 字段收到超出 2^53 的整数会按 `Double` 取近似值（`Double` 本来就装不下）；`Int` 字段超出 ±2^31 由标准库报 overflow，库翻成「超出 Int 范围」。
+另一个代价：`Double` 字段收到超出 2^53 的整数会按 `Double` 取近似值（`Double` 本来就装不下）；`Int` 字段超出 ±2^31 由标准库报 overflow，库翻成「超出 Int 范围」。按键路径同理：`get_float` 默认接受整数并加宽，`get_float_strict` 只收 `Float`。
 
 `Bytes` 是同一个道理：标准库的 `ToJson for Bytes` 把可打印 ASCII 原样输出、其余写成 `\xHH`，而 `FromJson for Bytes` 读的就是同一套格式（`moonbitlang/core/json/from_json.mbt:309`）。两头都是标准库的实现，不用库自己写编码器，也不会和标准库走偏。
 

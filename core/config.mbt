@@ -158,8 +158,25 @@ pub fn Config::get_bool(self : Config, path : String) -> Bool raise ConfigError 
 }
 
 ///|
-/// 取路径上的浮点数
+/// 取路径上的浮点数。
+///
+/// 整数按浮点加宽（`Int64` → `Double`），超出 2^53 时按浮点精度近似；
+/// 需要只接受 `Float` 时用 `get_float_strict`。
 pub fn Config::get_float(
+  self : Config,
+  path : String,
+) -> Double raise ConfigError {
+  let value = self.get_value(path)
+  match value.kind {
+    ValueKind::Float(f) => f
+    ValueKind::Int(i) => i.to_double()
+    k => raise ConfigError::TypeMismatch(path, "Float", k.name())
+  }
+}
+
+///|
+/// 取路径上的浮点数，只接受 `Float`，不把整数加宽。
+pub fn Config::get_float_strict(
   self : Config,
   path : String,
 ) -> Double raise ConfigError {
@@ -229,27 +246,15 @@ pub fn Config::origin_at(
 
 ///|
 /// 所有叶子路径和它们的来源，适合做 `--print-config` 这类诊断命令。
+///
+/// 叶子口径和 `snapshot()` 一致，只是不返回值；来源未追踪的叶子会被跳过。
 pub fn Config::origins(self : Config) -> Array[Origin] raise ConfigError {
   let result : Array[Origin] = []
-  collect_origins(self.merged(), KeyPath::root(), result)
-  result
-}
-
-///|
-fn collect_origins(
-  value : Value,
-  path : KeyPath,
-  result : Array[Origin],
-) -> Unit {
-  match value.kind {
-    ValueKind::Table(table) =>
-      for key, child in table {
-        collect_origins(child, path.add(key), result)
-      }
-    _ =>
-      match value.origin {
-        Some(site) => result.push(Origin::{ site, path, })
-        None => ()
-      }
+  for entry in self.snapshot() {
+    match entry.origin() {
+      Some(origin) => result.push(origin)
+      None => ()
+    }
   }
+  result
 }

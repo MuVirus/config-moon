@@ -35,14 +35,14 @@ moonfig 是一个综合性配置库，面向多来源配置：把常见配置格
 ## 功能特性
 
 - **类型安全配置**：复用 MoonBit 原生 `derive(FromJson)` 派生机制，支持提取到结构体。本库负责配置值到 Json 的映射和错误翻译，并对容易混淆的类型做额外检查，无需额外的代码生成器。
-- **严格类型转换**：取值与提取按声明类型进行检查，对常见的跨类型写法报错，避免隐式转换；特定类型（如 `BigInt` 、`自定义 FromJson` 等）则遵循其自身规则。
+- **严格类型转换**：取值与提取按声明类型进行检查，对常见的跨类型写法报错，避免隐式转换；唯一的加宽是整数→浮点（`get_float`），需要严格时用 `get_float_strict`。特定类型（如 `BigInt`、`自定义 FromJson` 等）则遵循其自身规则。
 - **多格式支持**：JSON、INI、dotenv、YAML、TOML、XML、CBOR 字节或自建的 `Value` 树都能作为来源，换格式不用改上层声明
 - **自动发现格式**：`Detector` 先认文件后缀，再看内容；无法判断时报 `UnknownFormat` 并列出候选后缀
 - **热更新**：`build_live()` 保留来源清单，`Watcher::poll()` 检测文件变化并替换快照；坏配置不会生效
 - **多层来源**：内存默认值、配置文件、环境变量、命令行参数按加入顺序叠加，后加的覆盖先加的
 - **按键合并**：后加入的来源只覆盖先加入来源的同名键，同名之外的键全部保留
 - **错误信息明确**：`MissingKey` / `TypeMismatch` / `ParseError` / `UnknownFormat`，错误消息包含键名、期望类型与实际类型
-- **来源可追**：`origin_of` / `origins()` 给出源对象和结构化层级路径，展示用的 label 按需生成
+- **来源可追**：`origin_of` / `origins()` 按路径反查来源，`snapshot()` 导出路径、值与来源；展示用的 label 按需生成
 - **可校验**：按键用规则表，结构体用 `Validate`，启动时一次暴露缺失、越界和未知键
 
 ---
@@ -110,7 +110,7 @@ cfg.get_int("db.port")      // 6543          ← 第二个来源覆盖
 
 ### 类型安全
 
-取值按实际类型匹配，避免隐式转换（如浮点数提取到整数字段会报错，不会截断成整数部分）：
+取值按实际类型匹配，避免隐式转换（浮点数提取到整数字段会报错，不会截断成整数部分；唯一的加宽是整数→浮点，可用 `get_float_strict` 关掉）：
 
 ```moonbit nocheck
 using @config {type Config, type StringSource}
@@ -137,7 +137,7 @@ let numeric : NumericPort = extract_from(cfg, "db") // 报错：key 'db.port': e
 
 ### 按键取值
 
-`MemorySource` 装默认值，按声明的类型取值；形状不符就报错，不做转换：
+`MemorySource` 装默认值，按声明的类型取值；形状不符就报错，除整数→浮点外不做转换：
 
 ```moonbit nocheck
 using @config {type Config, type MemorySource, type Value}
@@ -154,10 +154,12 @@ let cfg = Config::new()
   )
   .build()
 
-cfg.get_string("db.host")   // "localhost"
-cfg.get_int("db.port")      // 5432
-cfg.get_bool("debug")       // false
-cfg.get_float("ratio")      // 0.5
+cfg.get_string("db.host")        // "localhost"
+cfg.get_int("db.port")           // 5432
+cfg.get_bool("debug")            // false
+cfg.get_float("ratio")           // 0.5
+cfg.get_float("db.port")         // 5432.0，整数按浮点加宽
+cfg.get_float_strict("db.port")  // 报错：expected Float, got Int
 ```
 
 ### 多来源叠加
@@ -334,11 +336,15 @@ origin.kind()           // SourceKind::Memory
 origin.label()          // "memory"
 origin.path().to_string() // "db.port"
 cfg.origins()           // [Origin { ... }]，只列叶子路径
+cfg.snapshot()          // [Entry { ... }]，路径、值、来源一起导出
 ```
 
 `origin.kind()` 可以直接模式匹配；`origin.path()` 给结构化的 `KeyPath`，需要逐段判断时不用拆字符串；
 `label()` 只用于展示，按需生成，不反解析。要重新读原始内容时用 `origin.locator()`。
 查询在没 `build()` 时会现场合并，所以带 `raise`。
+
+`snapshot()` 每条给 `path()` / `value()` / `origin()`；表节点递归、数组当叶子，和 `origins()` 同一套口径。
+来源未追踪时 `origin()` 是 `None`，不会伪造一个 label。
 
 ### 提取到结构体
 

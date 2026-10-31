@@ -69,6 +69,8 @@ cfg.get_bytes("cert")            // Bytes
 
 - 路径用点号展开：`"db.host"` → `Table{"db": Table{"host": ...}}`
 - key 不存在 → **报错，不返回默认值**（默认值应该由 `MemorySource` 提供，那才是它的职责）
+- `get_float` 默认把 `Int` 加宽成 `Double`，超出 2^53 时按浮点精度近似；`get_float_strict` 只接受 `Float`。反方向（`Float` → 整数）始终报错，不截断
+- `Config::snapshot()` 导出 `Array[Entry]`，每条是路径、值、来源；`origins()` 从同一套遍历里取来源。表节点递归，数组当叶子
 
 需要配置文件变化后自动重读时，用 `build_live()` 保留来源清单，见 [hot-reload.md](hot-reload.md)。
 

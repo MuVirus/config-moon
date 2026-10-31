@@ -123,9 +123,14 @@ pub(open) trait Source {
 - `Config::origin_of(path) -> Origin? raise ConfigError`
 - `Config::origin_at(path : KeyPath) -> Origin? raise ConfigError`
 - `Config::origins() -> Array[Origin] raise ConfigError`，路径在遍历时算出来，不存进节点
+- `Config::snapshot() -> Array[Entry] raise ConfigError`，每条带路径、值、来源
 
 `Origin` 的方法：`kind()`、`label()`、`path()`、`locator()`、`site()`。`path()` 给结构化的
 `KeyPath`（`segments()` / `to_string()`），需要程序化判断时直接看段，不用拆字符串。
+
+`Config::snapshot()` 把当前树导成 `Array[Entry]`，每条是「路径 + 值 + 来源」，对应
+`path()` / `value()` / `origin()`。表节点递归、数组当叶子，和 `origins()` 共用同一套遍历；
+来源未追踪时 `origin()` 给 `None`，不伪造 label。
 
 两个查询在没 `build()` 时会现场合并，所以保留 `raise`；路径不存在时 `origin_of` 给 `None`。
 `StringSource` / `BytesSource` 报 `SourceKind::Custom`，标签是 `string` / `bytes`。

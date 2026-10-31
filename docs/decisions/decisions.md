@@ -119,3 +119,16 @@
 >   约束和未知键。校验是显式的一步，调用方自己决定什么时候跑、失败后怎么处理。
 > - `Rule` 内部存 `(KeyPath, Value) -> ConfigError?`：组合规则（`allowed_keys`）需要在路径下面再拼一段，
 >   只返回一个字符串不够定位到具体的键。`Rule::custom` 仍然只让用户返回 `String?`。
+
+## 10. 浮点加宽与带来源快照
+
+> **2026-10 定稿：默认加宽整数，严格模式单独提供；快照和 `origins()` 共用叶子口径。**
+>
+> - `get_float` 接受 `Int` 并 `to_double()`：整数可以作为浮点字段的数值加宽，
+>   超出 2^53 时按浮点精度近似。反方向（`Float` → 整数）仍报 `TypeMismatch`，不截断。
+> - 需要「只收 `Float`」的调用方用 `get_float_strict`。不把严格做成默认，因为 JSON 里的
+>   `1` 本来就是合法整数，默认拒绝会很意外；加宽只在 `Int → Float` 一个方向发生。
+> - `Config::snapshot()` 返回 `Array[Entry]`，每条带 `path` / `value` / `origin`。表节点递归、
+>   数组当叶子，和 `origins()` 用同一套遍历，避免两套「什么算叶子」的口径。
+> - `origin` 是 `Origin?`：`Layer::untracked` 的来源没有可报告的对象，导出时保留 `None`，
+>   不伪造 label。`origins()` 仍只返回有来源的叶子。

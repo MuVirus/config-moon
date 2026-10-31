@@ -35,14 +35,14 @@ moonfig is a comprehensive configuration library built for multi-source configur
 ## Features
 
 - **Type-safe configuration**: reuses MoonBit's native `derive(FromJson)` mechanism to extract into structs. The library maps config values to Json, translates errors and adds extra checks for easily confused types; no code generator is needed
-- **Strict conversions**: reads and extraction check the declared type and reject common cross-type spellings instead of converting implicitly; specific types (`BigInt`, a custom `FromJson`, and so on) follow their own rules
+- **Strict conversions**: reads and extraction check the declared type and reject common cross-type spellings instead of converting implicitly; the only widening is integer→float (`get_float`), and `get_float_strict` turns even that off. Specific types (`BigInt`, a custom `FromJson`, and so on) follow their own rules
 - **Many formats**: JSON, INI, `.env`, YAML, TOML, XML, CBOR bytes, or a hand-built `Value` tree can each act as a source
 - **Format detection**: `Detector` checks the file suffix first, then the content; when neither decides it raises `UnknownFormat` listing the candidate suffixes
 - **Hot reload**: `build_live()` keeps the source list, and `Watcher::poll()` detects file changes and swaps the snapshot; a bad config never takes effect
 - **Layered sources**: in-memory defaults, config files, environment variables and command-line flags stack in the order you add them, later ones winning
 - **Merge by key**: a later source overrides only the keys it shares with an earlier one; every other key survives
 - **Errors that name the culprit**: `MissingKey` / `TypeMismatch` / `ParseError` / `UnknownFormat`, each message carrying the key, the expected type and the actual type
-- **Traceable origins**: `origin_of` / `origins()` give you the source object and a structured key path; the display label is generated on demand
+- **Traceable origins**: `origin_of` / `origins()` look a source up by path, and `snapshot()` exports path, value and source together; the display label is generated on demand
 - **Validatable**: rule lists by key or a `Validate` impl on your struct, surfacing missing keys, out-of-range values and unknown keys at startup
 
 ---
@@ -116,7 +116,7 @@ cfg.get_int("db.port")      // 6543          ← overridden by the second
 
 ### Type safety
 
-Reads match the value's actual type exactly; no implicit conversion is performed. A JSON float extracted into an integer field is a type mismatch, never a truncation:
+Reads match the value's actual type exactly; no implicit conversion is performed, except integer→float widening, which `get_float_strict` turns off. A JSON float extracted into an integer field is a type mismatch, never a truncation:
 
 ```moonbit nocheck
 using @config {type Config, type StringSource}
@@ -144,7 +144,7 @@ let numeric : NumericPort = extract_from(cfg, "db") // error: key 'db.port': exp
 ### Read by key
 
 `MemorySource` holds your defaults; every getter checks the declared type and
-never converts:
+never converts, except integer→float widening:
 
 ```moonbit nocheck
 using @config {type Config, type MemorySource, type Value}
@@ -161,10 +161,12 @@ let cfg = Config::new()
   )
   .build()
 
-cfg.get_string("db.host")   // "localhost"
-cfg.get_int("db.port")      // 5432
-cfg.get_bool("debug")       // false
-cfg.get_float("ratio")      // 0.5
+cfg.get_string("db.host")        // "localhost"
+cfg.get_int("db.port")           // 5432
+cfg.get_bool("debug")            // false
+cfg.get_float("ratio")           // 0.5
+cfg.get_float("db.port")         // 5432.0, integer widened to float
+cfg.get_float_strict("db.port")  // error: expected Float, got Int
 ```
 
 ### Stacking sources
@@ -341,11 +343,15 @@ origin.kind()             // SourceKind::Memory
 origin.label()            // "memory"
 origin.path().to_string() // "db.port"
 cfg.origins()             // [Origin { ... }], leaves only
+cfg.snapshot()            // [Entry { ... }], path, value and source together
 ```
 
 `origin.kind()` is there for pattern matching; `origin.path()` gives a structured `KeyPath`, so you never
 have to split a string; `label()` is display-only and generated on demand. Use `origin.locator()` to
 re-read the original bytes. The queries merge on demand when `build()` has not run, so they can raise.
+
+Every `snapshot()` entry exposes `path()` / `value()` / `origin()`; tables recurse and arrays stay leaves,
+the same rule as `origins()`. An untracked source gives `origin() == None` instead of a made-up label.
 
 ### Extract into a struct
 

@@ -123,6 +123,32 @@ test "getters report expected and actual" {
 }
 
 ///|
+/// get_float 默认把整数加宽成浮点；严格模式仍然只收 Float
+test "get_float widens Int and get_float_strict does not" {
+  let cfg = Config::new()
+    .add(
+      MemorySource::new(
+        Value::table({
+          "int": Value::int(5432L),
+          "float": Value::float(0.5),
+          "str": Value::str("1"),
+        }),
+      ),
+    )
+    .build()
+  assert_eq(cfg.get_float("float"), 0.5)
+  assert_eq(cfg.get_float("int"), 5432.0)
+  assert_eq(
+    type_error_of("Float", () => ignore(cfg.get_float_strict("int"))),
+    "int: expected Float, got Int",
+  )
+  assert_eq(
+    type_error_of("Float", () => ignore(cfg.get_float("str"))),
+    "str: expected Float, got Str",
+  )
+}
+
+///|
 /// byte string原样取出来
 test "get_bytes returns the raw bytes" {
   let cfg = Config::new()

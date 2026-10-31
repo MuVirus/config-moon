@@ -50,6 +50,7 @@ pub fn Config::build_live(Self) -> LiveConfig raise ConfigError
 pub fn Config::get_bool(Self, String) -> Bool raise ConfigError
 pub fn Config::get_bytes(Self, String) -> Bytes raise ConfigError
 pub fn Config::get_float(Self, String) -> Double raise ConfigError
+pub fn Config::get_float_strict(Self, String) -> Double raise ConfigError
 pub fn Config::get_int(Self, String) -> Int64 raise ConfigError
 pub fn Config::get_string(Self, String) -> String raise ConfigError
 pub fn Config::get_value(Self, String) -> Value raise ConfigError
@@ -58,9 +59,17 @@ pub fn Config::new() -> Self
 pub fn Config::origin_at(Self, KeyPath) -> Origin? raise ConfigError
 pub fn Config::origin_of(Self, String) -> Origin? raise ConfigError
 pub fn Config::origins(Self) -> Array[Origin] raise ConfigError
+pub fn Config::snapshot(Self) -> Array[Entry] raise ConfigError
 pub fn Config::validate(Self, Array[Rule]) -> Unit raise ConfigError
 pub fn Config::validate_all(Self, Array[Rule]) -> Array[ConfigError] raise ConfigError
 pub fn Config::with_rule(Self, MergeRule) -> Self
+
+pub struct Entry {
+  // private fields
+}
+pub fn Entry::origin(Self) -> Origin?
+pub fn Entry::path(Self) -> KeyPath
+pub fn Entry::value(Self) -> Value
 
 pub struct KeyPath {
   // private fields

@@ -86,6 +86,14 @@ test "json source splits int and float" {
 }
 
 ///|
+/// 整数来源可以加宽到 Double 字段
+test "extract widens an integer into a Double field" {
+  let cfg = Config::new().add(json("{\"ratio\": 1}")).build()
+  let ratio : RatioCfg = extract_from(cfg, "")
+  assert_eq(ratio.ratio, 1.0)
+}
+
+///|
 /// `1.0` 这种integer值的浮点写法仍然按 Float 存，`get_int` 不能把它当integer。
 test "integral float is not readable as Int" {
   let cfg = Config::new().add(json("{\"port\": 1.0}")).build()
