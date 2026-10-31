@@ -51,9 +51,7 @@ pub fn Value::from_literal(StringView) -> Value raise ConfigError
 整层共用一个 site，site 里存「路径 → 变量名」索引，`origin_of("db.port")` 能指出是
 `APP_DB_PORT`。标量占了层级名、或两个变量落到同一个路径时报 `ParseError`，不按遍历顺序猜赢家。
 
-`CliSource` 的规则：只认 `--key=value` / `--flag` / `--no-flag`，`--` 之后全是位置参数，
-其它参数一律忽略；`-` 和 `.` 都算层级；同一个键写两次后写的赢，但标量和层级互相挡路时报错；
-site 里存「路径 → 参数名」索引，标签是不带值的参数名（`cli:--log-level`），密码不会漏进日志。
+`CliSource` 的解析规则（取值风格、短选项、数组、冲突）见 [cli-args.md](cli-args.md)。
 
 ## `core/` 里放什么
 

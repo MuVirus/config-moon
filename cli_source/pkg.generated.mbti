@@ -12,13 +12,26 @@ import {
 // Types and methods
 pub struct CliSource {
   args : Array[String]
+  // private fields
 }
 pub fn CliSource::collect(Self) -> @core.Layer raise @core.ConfigError
-pub fn CliSource::from_args(Array[String]) -> Self
+pub fn CliSource::from_args(Array[String], program_name? : Bool) -> Self
 pub fn CliSource::kind(Self) -> @core.SourceKind
 pub fn CliSource::new() -> Self
 pub fn CliSource::raw_locator(Self) -> &@core.Locator?
+pub fn CliSource::with_array(Self, String) -> Self
+pub fn CliSource::with_positional(Self, Int32, String) -> Self
+pub fn CliSource::with_short_flag(Self, String, String) -> Self
+pub fn CliSource::with_short_option(Self, String, String) -> Self
+pub fn CliSource::with_value_style(Self, CliValueStyle) -> Self
 pub impl @core.Source for CliSource
+
+pub(all) enum CliValueStyle {
+  Equals
+  Separate
+} derive(Eq)
+pub fn CliValueStyle::equal(Self, Self) -> Bool
+pub fn CliValueStyle::not_equal(Self, Self) -> Bool
 
 // Type aliases
 

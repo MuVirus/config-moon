@@ -9,7 +9,7 @@
 MoonBit 原生配置库
 
 
-**一处声明，多来源汇入。**
+**一处声明，多来源汇入**
 
 </div>
 
@@ -57,7 +57,7 @@ import {
 一段文本、一段字节。其余格式各占一个包，名字是 `core/format/<格式>_format`，
 只提供 `XxxFormat`；把需要的包写进 `moon.pkg`，再和 `StringSource` / `BytesSource` 组合。
 映射规则在每个包的文档注释里。文件、环境变量和命令行来源在模块根目录的
-`file_source/`、`env_source/`、`cli_source/`，用法见[下文](#文件环境变量命令行)。
+`file_source/`、`env_source/`、`cli_source/`，用法见[文件](#文件)、[环境变量](#环境变量)、[命令行参数](#命令行参数)。
 
 叠加两个来源，后加入的覆盖先加入的：
 
@@ -152,36 +152,76 @@ cfg.get_int("db.port")      // 6543          最后加入的赢
 
 默认规则是 `LastWins`；要换顺序用 `.with_rule(MergeRule::FirstWins)`，按来源类型排用 `MergeRule::ByKind([...])`，也可以传自定义函数。
 
-### 文件、环境变量、命令行
+### 文件
 
-外部来源各占一个包，和格式包分开：
+`FileSource` 读一个文件，格式由传入的 `Format` 决定：
 
 ```moonbit nocheck
 import {
   "MuVirus/moonfig/file_source" @file_source,
-  "MuVirus/moonfig/env_source" @env_source,
-  "MuVirus/moonfig/cli_source" @cli_source,
 }
-```
 
-```moonbit nocheck
-using @config {type Config, type MemorySource, type Value}
-using @jsonfmt {type JsonFormat}
+using @config {type Config}
 using @file_source {type FileSource}
-using @env_source {type EnvSource}
-using @cli_source {type CliSource}
+using @jsonfmt {type JsonFormat}
 
 let cfg = Config::new()
-  .add(MemorySource::new(Value::table({ "db": Value::table({ "port": Value::int(5432L) }) })))
-  .add(FileSource::new("config/app.json", JsonFormat::new()))  // 读文件，格式自己挑
-  .add(EnvSource::new("APP_"))                                  // APP_DB_PORT=6543 → db.port
-  .add(CliSource::new())                                        // --log-level=debug → log.level
+  .add(FileSource::new("config/app.json", JsonFormat::new()))
   .build()
 ```
 
-- `FileSource`：路径加一个 `Format`，读不到文件报 `IoError`（带路径），解析失败报 `ParseError`；`origin_of` 拿到的 `locator` 能重新读同一个文件。
-- `EnvSource`：只读指定前缀的变量，`_` 和 `.` 都算层级，键名转小写，值按字面猜类型（`"5432"` → `Int`、`"true"` → `Bool`）；`EnvSource::all()` 读全部变量。标量占了层级名、或两个变量落到同一个路径时报错，不猜谁该赢。
-- `CliSource`：只认 `--key=value`、`--flag`、`--no-flag`，`--` 之后全是位置参数；同一个键写两次后写的赢，标量和层级互相挡路时报错；标签是不带值的参数名，密码不会漏进日志。
+读不到文件报 `IoError`（消息带路径），内容解析失败报 `ParseError`；`origin_of` 拿到的 `locator` 能重新读同一个文件。不想指定格式就用 [`FileSource::auto`](#自动发现格式)。
+
+### 环境变量
+
+`EnvSource` 按前缀读环境变量，前缀不参与键名：
+
+```moonbit nocheck
+import {
+  "MuVirus/moonfig/env_source" @env_source,
+}
+
+using @config {type Config}
+using @env_source {type EnvSource}
+
+let cfg = Config::new()
+  .add(EnvSource::new("APP_"))  // APP_DB_PORT=6543 → db.port
+  .build()
+```
+
+`_` 和 `.` 都算层级，键名转小写，值按字面猜类型（`"5432"` → `Int`、`"true"` → `Bool`）；`EnvSource::all()` 读全部变量。标量占了层级名、或两个变量落到同一个路径时报错，不猜谁该赢。
+
+### 命令行参数
+
+`CliSource` 读 argv。取值风格二选一，不混用：
+
+```moonbit nocheck
+import {
+  "MuVirus/moonfig/cli_source" @cli_source,
+}
+
+using @config {type Config}
+using @cli_source {type CliSource, type CliValueStyle}
+
+let cfg = Config::new()
+  .add(
+    CliSource::new()
+      .with_value_style(CliValueStyle::Separate)  // --start 0
+      .with_positional(0, "command")              // simulate
+      .with_positional(1, "model")                // model.fmu
+      .with_array("tag")                          // --tag a --tag b → ["a", "b"]
+      .with_short_option("p", "db.port"),         // -p 5432
+  )
+  .build()
+```
+
+- 默认 `CliValueStyle::Equals` 只认 `--key=value`；`Separate` 只认 `--key value`。另一种写法报错，不静默忽略（`Equals` 下的 `--key value` 只是开关加位置参数）。
+- 裸 `--key` 是布尔 `true`，`--no-key` 是 `false`；短选项要先登记，取值写法跟着风格走（`-p=5432` 或 `-p 5432`），布尔短选项可连写 `-vq`。
+- `.with_array("tag")` 声明的路径写几次就收成数组；`.with_positional(0, "command")` 把第 0 个位置参数映射到键。
+- 没声明成数组的重复键后写的赢；标量和层级互相挡路时报错。
+- `--` 之后全是位置参数；没映射的位置参数和没登记的短选项忽略。标签不带值，密码不会漏进日志。
+
+三个来源都是 `Source`，按 `.add` 的顺序叠加，后加的赢；合并规则见[多来源叠加](#多来源叠加)。
 
 ### 自动发现格式
 
@@ -372,6 +412,7 @@ try {
 - `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
 - `examples/` —— 可运行示例，`moon run examples/<示例名>`
 - [docs/AGENTS.md](docs/AGENTS.md) —— 文档索引与写作规范
+- [docs/design/cli-args.md](docs/design/cli-args.md) —— 命令行参数的解析设计
 - [docs/design/format-detect.md](docs/design/format-detect.md) —— 自动发现格式的设计
 - [docs/design/hot-reload.md](docs/design/hot-reload.md) —— 热更新的设计
 

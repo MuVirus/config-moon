@@ -9,6 +9,7 @@
 - `design/` —— 设计文档，讲「为什么这样定」
   - [`design.md`](design/design.md) —— 主线与核心数据模型
   - [`sources.md`](design/sources.md) —— Source / Format 接口、core 边界、package 划分、来源追踪、第三方解析器的取舍
+  - [`cli-args.md`](design/cli-args.md) —— 命令行参数：取值风格、短选项登记、数组声明、位置映射、冲突与来源标签
   - [`extract.md`](design/extract.md) —— 提取到结构体、整数映射、错误消息
   - [`validate.md`](design/validate.md) —— 校验：按键规则表、结构体 `Validate`、未知键、错误
   - [`format-detect.md`](design/format-detect.md) —— 自动发现格式：后缀优先、内容判断、候选顺序

@@ -61,8 +61,9 @@ other format has a package of its own, named `core/format/<format>_format` and
 exposing only `XxxFormat`; add the one you need to your `moon.pkg` and combine it
 with `StringSource` / `BytesSource`. The mapping rules live in each package's doc
 comment. The file, environment and command-line sources live in `file_source/`,
-`env_source/` and `cli_source/` at the module root; see
-[below](#files-environment-variables-command-line).
+`env_source/` and `cli_source/` at the module root; see [Files](#files),
+[environment variables](#environment-variables) and
+[command line arguments](#command-line-arguments).
 
 Stack two sources and the later one wins:
 
@@ -158,36 +159,76 @@ cfg.get_int("db.port")      // 6543          the last one wins
 
 The default rule is `LastWins`. Use `.with_rule(MergeRule::FirstWins)` to flip the order, `MergeRule::ByKind([...])` to rank by source kind, or pass a custom function.
 
-### Files, environment variables, command line
+### Files
 
-Each external source is a package of its own, separate from the format packages:
+`FileSource` reads one file; the `Format` you pass decides how to parse it:
 
 ```moonbit nocheck
 import {
   "MuVirus/moonfig/file_source" @file_source,
-  "MuVirus/moonfig/env_source" @env_source,
-  "MuVirus/moonfig/cli_source" @cli_source,
 }
-```
 
-```moonbit nocheck
-using @config {type Config, type MemorySource, type Value}
-using @jsonfmt {type JsonFormat}
+using @config {type Config}
 using @file_source {type FileSource}
-using @env_source {type EnvSource}
-using @cli_source {type CliSource}
+using @jsonfmt {type JsonFormat}
 
 let cfg = Config::new()
-  .add(MemorySource::new(Value::table({ "db": Value::table({ "port": Value::int(5432L) }) })))
-  .add(FileSource::new("config/app.json", JsonFormat::new()))  // reads the file, format of your choice
-  .add(EnvSource::new("APP_"))                                  // APP_DB_PORT=6543 → db.port
-  .add(CliSource::new())                                        // --log-level=debug → log.level
+  .add(FileSource::new("config/app.json", JsonFormat::new()))
   .build()
 ```
 
-- `FileSource`: a path plus a `Format`. A missing file raises `IoError` (with the path), a bad payload raises `ParseError`; the `locator` from `origin_of` can read the same file again.
-- `EnvSource`: reads only variables with the given prefix; both `_` and `.` split levels, names are lowercased, and values are inferred from their text (`"5432"` → `Int`, `"true"` → `Bool`). `EnvSource::all()` reads every variable. A scalar in the way of a branch, or two variables landing on one path, is an error rather than a guess.
-- `CliSource`: accepts `--key=value`, `--flag` and `--no-flag`; everything after `--` is positional. The same key twice means the later one wins, but a scalar and a branch in each other's way is an error. The label is the argument name without its value, so passwords never reach the logs.
+A missing file raises `IoError` (with the path) and a bad payload raises `ParseError`; the `locator` from `origin_of` can read the same file again. Use [`FileSource::auto`](#format-detection) when you do not want to name the format.
+
+### Environment variables
+
+`EnvSource` reads variables with a prefix; the prefix is not part of the keys:
+
+```moonbit nocheck
+import {
+  "MuVirus/moonfig/env_source" @env_source,
+}
+
+using @config {type Config}
+using @env_source {type EnvSource}
+
+let cfg = Config::new()
+  .add(EnvSource::new("APP_"))  // APP_DB_PORT=6543 → db.port
+  .build()
+```
+
+Both `_` and `.` split levels, names are lowercased, and values are inferred from their text (`"5432"` → `Int`, `"true"` → `Bool`). `EnvSource::all()` reads every variable. A scalar in the way of a branch, or two variables landing on one path, is an error rather than a guess.
+
+### Command line arguments
+
+`CliSource` reads argv. Pick one value style; do not mix:
+
+```moonbit nocheck
+import {
+  "MuVirus/moonfig/cli_source" @cli_source,
+}
+
+using @config {type Config}
+using @cli_source {type CliSource, type CliValueStyle}
+
+let cfg = Config::new()
+  .add(
+    CliSource::new()
+      .with_value_style(CliValueStyle::Separate)  // --start 0
+      .with_positional(0, "command")              // simulate
+      .with_positional(1, "model")                // model.fmu
+      .with_array("tag")                          // --tag a --tag b → ["a", "b"]
+      .with_short_option("p", "db.port"),         // -p 5432
+  )
+  .build()
+```
+
+- The default `CliValueStyle::Equals` accepts only `--key=value`; `Separate` accepts only `--key value`. The other form is an error rather than being silently ignored (under `Equals`, `--key value` is just a flag plus a positional argument).
+- A bare `--key` is boolean `true` and `--no-key` is `false`. Short options must be registered, and their value form follows the style (`-p=5432` or `-p 5432`); boolean short options can be clustered as `-vq`.
+- Paths declared with `.with_array("tag")` collect repeated occurrences into an array; `.with_positional(0, "command")` maps positional 0 to a key.
+- Repeated keys that are not declared as arrays mean the later one wins; a scalar and a branch in each other's way is an error.
+- Everything after `--` is positional; unmapped positionals and unregistered short options are ignored. Labels never include values, so passwords never reach the logs.
+
+All three sources implement `Source` and stack in `.add` order, later ones winning; see [Stacking sources](#stacking-sources).
 
 ### Format detection
 
@@ -380,6 +421,7 @@ The full item list and the trade-offs behind them live in
 - `moon doc --serve` —— start a local preview (http://127.0.0.1:3000 by default)
 - `examples/` —— runnable examples, `moon run examples/<name>`
 - [docs/AGENTS.md](docs/AGENTS.md) —— documentation index and writing rules
+- [docs/design/cli-args.md](docs/design/cli-args.md) —— command line parsing design
 - [docs/design/format-detect.md](docs/design/format-detect.md) —— format detection design
 - [docs/design/hot-reload.md](docs/design/hot-reload.md) —— hot reload design
 

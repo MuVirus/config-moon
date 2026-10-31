@@ -92,7 +92,7 @@
 > - `Config::attach_origin` 只补没有 site 的节点。`EnvSite` / `CliSite` 在 `collect()` 里建好「路径 → 原始名字」索引，整层共用一个 site；表节点也落在这个 site 上，`describe` 查不到时退回 `env:前缀*` / `cli:args`。
 > - `EnvSource` 只读指定前缀；`_` 和 `.` 都算层级，名字转小写。标量占了层级名、或两个变量落到同一个路径时报 `ParseError` 并点名两个变量——按 Map 遍历顺序猜赢家会让结果随平台变。变量名排序后才处理，保证同一份环境每次结果一致。
 > - 环境变量的大小写冲突在 Windows 上测不出来：系统本身不区分大小写，`set_env_var` 会直接覆盖同名变量。碰撞检测仍在代码里，用白盒测试直接喂 `assign` 验证。
-> - `CliSource` 只认长选项，位置参数和 `-x` 一律忽略——命令行上还有程序自己的参数。`--` 之后全部当位置参数。同一个键写两次后写的赢，但标量和层级互相挡路时（`--a=1 --a.b=2`、`--a.b=1 --a=2`）都报错，不静默丢值。
+> - `CliSource` 的取值风格必须二选一：`Equals` 只认 `--key=value`，`Separate` 只认 `--key value`，不在一个来源里混用——混着支持会让 `--flag positional` 这种写法没法解释。短选项必须先登记，重复参数用 `with_array` 显式声明，位置参数用 `with_positional` 按「非选项参数」的顺序映射；解析规则和错误边界见 [cli-args.md](../design/cli-args.md)。
 > - 命令行标签只写参数名（`cli:--db-password`），不写值：密码不该因为来源追踪漏进日志。
 > - 新增的依赖 `moonbitlang/x` 手写进 `moon.mod`，没用 `moon add`（本仓库的约定）。
 
