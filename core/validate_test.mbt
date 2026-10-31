@@ -130,6 +130,46 @@ test "type mismatch is reported as InvalidValue" {
 }
 
 ///|
+/// 内置规则遇到形状不对也报错，不静默通过
+test "validate rules reject the wrong shape" {
+  let cfg = Config::new()
+    .add(
+      MemorySource::new(
+        Value::table({
+          "db": Value::table({ "port": Value::int(5432L) }),
+          "log": Value::table({ "level": Value::int(1L) }),
+        }),
+      ),
+    )
+    .build()
+  let length = try {
+    cfg.validate([Rule::string_len("db.port", 1, 64)])
+    "no error"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    length, "invalid value for key 'db.port': expected 1..64 characters, got Int",
+  )
+  let one_of = try {
+    cfg.validate([Rule::one_of("log.level", ["debug", "info"])])
+    "no error"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(
+    one_of, "invalid value for key 'log.level': expected debug / info, got Int",
+  )
+  let table = try {
+    cfg.validate([Rule::allowed_keys("db.port", ["host"])])
+    "no error"
+  } catch {
+    error => error.to_string()
+  }
+  assert_eq(table, "key 'db.port': expected Table, got Int")
+}
+
+///|
 /// `allowed_keys` 只允许列出的键，未知键的路径指到具体的键
 test "allowed_keys points at the extra key" {
   let cfg = Config::new()

@@ -58,6 +58,14 @@ jobs:
       - name: Build all targets
         run: moon build --target all --deny-warn
 
+      - name: Run examples
+        run: |
+          moon run examples/multi_source -- --log-level=debug
+          moon run examples/strict_types
+          moon run examples/validate
+          moon run examples/format_detect
+          moon run examples/hot_reload
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -76,3 +84,8 @@ jobs:
 
       - name: Run tests on all targets
         run: moon test --target all --deny-warn
+
+      # Report only: no coverage threshold yet. Examples appear as 0/N because
+      # they are entry points, so the total is not a library-only number.
+      - name: Report coverage
+        run: moon coverage analyze -- -f summary

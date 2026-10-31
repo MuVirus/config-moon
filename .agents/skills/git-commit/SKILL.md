@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 提交 Git 变更时的规范。需要提交、写 commit message、选择 docs/feat/fix 等标签，或判断是否该主动提交时使用。
+description: 提交 Git 变更时的规范。需要提交、写 commit message、选择 docs/feat/fix 等标签、判断是否该主动提交，或推送并执行 `moon publish` 前检查版本号时使用。
 ---
 
 # Git 提交规范
@@ -71,3 +71,30 @@ feat: Added new feature.   # 过去式、大写开头、多余句号
 - 确认 `.mbti` 的 diff 符合预期，没有把生成物、`_build/` 或临时文件加入暂存区。
 - 只提交与本次任务相关的文件；用户未要求时不要提交其工作区里的其他修改。
 - 提交后报告：提交哈希、message、包含的文件范围，以及测试结果。
+
+## 五、推送与发布（`moon publish`）
+
+`moon publish` 没有版本参数，发布的就是 `moon.mod`（或 `moon.mod.json`）里当前的 `version`。发布不可撤销，因此：
+
+- **只有用户明确说「发布」「publish」「推到 mooncakes」时才执行 `moon publish`。** 用户只说「提交」「推送」时不发布；写完代码更不要顺手发布。
+- 发布前先读 `moon.mod` 的 `version`，并和上一个已发布的 tag / 提交比较，确认这次改动**确实提升了版本号**：
+  - 版本没变 → 不要直接发布，先按下面的规则升级版本；
+  - 版本变了 → 核对是否与本次改动匹配，再继续。
+- 用户没有指定版本号时，默认只做**最小增量**：`0.1.4 → 0.1.5`。不要自作主张跳 minor / major，也不要在没有改动理由时改成 `1.0.0`。
+- 用户明确给了版本号（如「发 0.2.0」）时，以用户的为准，即使它不是最小增量。
+- 版本号升级单独提交，message 固定为：
+
+  ```text
+  chore: bump version to <X.Y.Z>
+  ```
+
+  不要把它和功能改动混在同一个提交里；先提交功能，再提交版本号。
+- 发布流程：
+
+  1. 改 `moon.mod` 的 `version`；
+  2. 按项目规范跑 `moon info && moon fmt`、`moon check`、`moon test`；
+  3. 提交版本号 `chore: bump version to <X.Y.Z>`；
+  4. 用户要求推送时执行 `git push`；
+  5. 先跑 `moon publish --dry-run` 确认打包内容与版本，再执行真正的 `moon publish`。
+
+- 发布后报告：模块名、新版本号、commit 哈希、`moon publish` 的结果；失败时贴出错误原文，不要重试到成功为止。

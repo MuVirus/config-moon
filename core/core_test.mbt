@@ -471,6 +471,16 @@ test "Value::from_literal infers bool, int, float and string" {
 }
 
 ///|
+/// 不完整的数字形状仍然是字符串，不会误判成 Int/Float
+test "Value::from_literal keeps incomplete numeric shapes as strings" {
+  assert_eq(Value::from_literal("-").kind, ValueKind::Str("-"))
+  assert_eq(Value::from_literal("1.").kind, ValueKind::Str("1."))
+  assert_eq(Value::from_literal("1e").kind, ValueKind::Str("1e"))
+  assert_eq(Value::from_literal("2e+3").kind, ValueKind::Float(2000.0))
+  assert_eq(Value::from_literal("-0.5e1").kind, ValueKind::Float(-5.0))
+}
+
+///|
 /// integer超出 `Int64` 时报错，不静默降级成浮点或字符串
 test "Value::from_literal reports integer overflow" {
   let message = try {

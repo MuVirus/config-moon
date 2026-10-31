@@ -195,6 +195,23 @@ test "CliSource reads short options in the selected style" {
 }
 
 ///|
+/// 短选项名字可以带前导 `-`；数组 key 的 `-` 和 `.` 都按层级处理
+test "CliSource accepts dashed short names and normalizes array keys" {
+  let cfg = Config::new()
+    .add(
+      CliSource::from_args(["-p=5432", "--log-level=a", "--log-level=b"])
+      .with_short_option("-p", "db.port")
+      .with_array("log-level"),
+    )
+    .build()
+  assert_eq(cfg.get_int("db.port"), 5432L)
+  assert_true(
+    cfg.get_value("log.level").kind is @config.ValueKind::Array(items) &&
+    items.length() == 2,
+  )
+}
+
+///|
 /// 短选项不许混用另一种风格
 test "CliSource rejects the other style for short options" {
   let message = try {

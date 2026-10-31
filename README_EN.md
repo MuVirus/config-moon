@@ -15,12 +15,20 @@ A native configuration library for MoonBit.
 
 ## Contents
 
+- [Goals](#goals)
 - [Features](#features)
+- [Installation](#installation)
 - [Quick start](#quick-start)
 - [Example](#example)
 - [Roadmap](#roadmap)
 - [Documentation](#documentation)
 - [License](#license)
+
+---
+
+## Goals
+
+moonfig is a comprehensive configuration library built for multi-source configuration: it unifies common config files, environment variables and the command line into one model, merges them according to the configured rules, then reads by key or extracts into a struct. The core is platform-independent and works on every target.
 
 ---
 
@@ -39,9 +47,17 @@ A native configuration library for MoonBit.
 
 ---
 
-## Quick start
+## Installation
 
-Add the dependencies to your `moon.pkg`:
+moonfig needs the MoonBit toolchain; see the [official installation guide](https://www.moonbitlang.com/download/), and make sure `moon version` works.
+
+Add the module to an existing MoonBit project:
+
+```sh
+moon add MuVirus/moonfig
+```
+
+Then import the packages you need in `moon.pkg`:
 
 ```moonbit
 import {
@@ -65,7 +81,21 @@ comment. The file, environment and command-line sources live in `file_source/`,
 [environment variables](#environment-variables) and
 [command line arguments](#command-line-arguments).
 
-Stack two sources and the later one wins:
+To run from a clone:
+
+```sh
+git clone https://github.com/MuVirus/moonfig.git
+cd moonfig
+moon update
+moon test
+moon run examples/multi_source -- --log-level=debug
+```
+
+---
+
+## Quick start
+
+With the dependency installed, stack two sources and the later one wins:
 
 ```moonbit nocheck
 using @config { type Config, type StringSource }
@@ -417,13 +447,14 @@ The full item list and the trade-offs behind them live in
 
 ## Documentation
 
-- `moon doc` —— generate the API reference into `_build/doc/`
-- `moon doc --serve` —— start a local preview (http://127.0.0.1:3000 by default)
-- `examples/` —— runnable examples, `moon run examples/<name>`
-- [docs/AGENTS.md](docs/AGENTS.md) —— documentation index and writing rules
-- [docs/design/cli-args.md](docs/design/cli-args.md) —— command line parsing design
-- [docs/design/format-detect.md](docs/design/format-detect.md) —— format detection design
-- [docs/design/hot-reload.md](docs/design/hot-reload.md) —— hot reload design
+- `moon doc` — generate the API reference into `_build/doc/`
+- `moon doc --serve` — start a local preview (http://127.0.0.1:3000 by default)
+- [`examples/`](examples/README.md) — five runnable examples, with their commands listed in the index
+- `moon coverage analyze -- -f summary` — run the tests and print a coverage summary
+- [docs/AGENTS.md](docs/AGENTS.md) — documentation index and writing rules
+- [docs/design/cli-args.md](docs/design/cli-args.md) — command line parsing design
+- [docs/design/format-detect.md](docs/design/format-detect.md) — format detection design
+- [docs/design/hot-reload.md](docs/design/hot-reload.md) — hot reload design
 
 > The documents under `docs/` are written in Chinese.
 

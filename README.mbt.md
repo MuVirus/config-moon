@@ -15,12 +15,20 @@ MoonBit 原生配置库
 
 ## 目录
 
+- [项目目标](#项目目标)
 - [功能特性](#功能特性)
+- [安装](#安装)
 - [快速开始](#快速开始)
 - [示例](#示例)
 - [开发路线图](#开发路线图)
 - [文档](#文档)
 - [许可证](#许可证)
+
+---
+
+## 项目目标
+
+moonfig 是一个综合性配置库，面向多来源配置：把常见配置格式文件、环境变量和命令行统一成一份配置，按合并规则叠加，再按键或结构体读取。core 部分不依赖平台，全平台可用。
 
 ---
 
@@ -39,9 +47,17 @@ MoonBit 原生配置库
 
 ---
 
-## 快速开始
+## 安装
 
-在 `moon.pkg` 中加入依赖：
+需要 MoonBit 工具链，安装方法见 [MoonBit 官方文档](https://www.moonbitlang.com/download/)；装好后 `moon version` 应该能输出版本号。
+
+在已有 MoonBit 项目里加依赖：
+
+```sh
+moon add MuVirus/moonfig
+```
+
+然后在 `moon.pkg` 里按需引入包：
 
 ```moonbit
 import {
@@ -59,7 +75,21 @@ import {
 映射规则在每个包的文档注释里。文件、环境变量和命令行来源在模块根目录的
 `file_source/`、`env_source/`、`cli_source/`，用法见[文件](#文件)、[环境变量](#环境变量)、[命令行参数](#命令行参数)。
 
-叠加两个来源，后加入的覆盖先加入的：
+从源码运行：
+
+```sh
+git clone https://github.com/MuVirus/moonfig.git
+cd moonfig
+moon update
+moon test
+moon run examples/multi_source -- --log-level=debug
+```
+
+---
+
+## 快速开始
+
+依赖装好后，叠加两个来源，后加入的覆盖先加入的：
 
 ```moonbit nocheck
 using @config { type Config, type StringSource }
@@ -410,7 +440,8 @@ try {
 
 - `moon doc` —— 生成 API 文档到 `_build/doc/`
 - `moon doc --serve` —— 启动本地预览（默认 http://127.0.0.1:3000）
-- `examples/` —— 可运行示例，`moon run examples/<示例名>`
+- [`examples/`](examples/README.md) —— 5 个可运行示例，索引里列了各自的运行命令
+- `moon coverage analyze -- -f summary` —— 跑测试并打印覆盖率摘要
 - [docs/AGENTS.md](docs/AGENTS.md) —— 文档索引与写作规范
 - [docs/design/cli-args.md](docs/design/cli-args.md) —— 命令行参数的解析设计
 - [docs/design/format-detect.md](docs/design/format-detect.md) —— 自动发现格式的设计
